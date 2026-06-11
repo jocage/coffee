@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: coffee-journey-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: coffee_journey
+      POSTGRES_USER: coffee
+      POSTGRES_PASSWORD: coffee
+    ports:
+      - "5432:5432"
+    volumes:
+      - coffee_pg_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coffee -d coffee_journey"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: coffee-journey-minio
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio-password
+    ports:
+      - "9100:9000"
+      - "9101:9001"
+    volumes:
+      - coffee_minio_data:/data
+
+volumes:
+  coffee_pg_data:
+  coffee_minio_data:

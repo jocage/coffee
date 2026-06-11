@@ -1,0 +1,55 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1781087997931,
+      "tag": "0000_plain_miracleman",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1781093491973,
+      "tag": "0001_tidy_mandrill",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781117746728,
+      "tag": "0002_mixed_kang",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1781118612349,
+      "tag": "0003_polite_virginia_dare",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1781118891183,
+      "tag": "0004_ancient_turbo",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781198400000,
+      "tag": "0005_social_targets",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1781203200000,
+      "tag": "0006_espresso_brew_logs",
+      "breakpoints": true
+    }
+  ]
+}
