@@ -4,10 +4,10 @@ import { ExportControls } from "@/components/export/export-controls";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Tabs } from "@/components/ui/tabs";
-import { getRecipes } from "@/lib/data/queries";
+import { getPreviewRecipe } from "@/lib/data/queries";
 
 export default async function ExportStudioPage() {
-  const [recipe] = await getRecipes();
+  const recipe = await getPreviewRecipe();
 
   return (
     <div className="mx-auto grid w-full max-w-7xl gap-5 px-4 py-5 md:px-6 xl:grid-cols-[300px_minmax(0,1fr)_280px]">

@@ -31,6 +31,7 @@ import {
   getViewerFromDb
 } from "@/lib/data/repositories";
 import type { BrewLog, BrewMethod, CoffeeBean, FeedItem, GearItem, Recipe, SocialTargetType, Visibility } from "@/lib/domain";
+import { recipes as seedRecipes } from "@/lib/data/seed";
 import { canReadVisibility } from "@/lib/permissions/visibility";
 
 export async function getCurrentUser() {
@@ -117,6 +118,12 @@ export async function getSavedRecipes(filters?: {
 export async function getRecipes() {
   noStore();
   return getRecipesFromDb();
+}
+
+export async function getPreviewRecipe(): Promise<Recipe> {
+  noStore();
+  const [recipe] = await getRecipesFromDb();
+  return recipe ?? seedRecipes[0];
 }
 
 export async function getRecipeById(id: string) {

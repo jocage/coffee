@@ -1,10 +1,10 @@
 import { ExportPreview } from "@/components/export/export-preview";
 import { RecipeForm } from "@/components/forms/recipe-form";
 import { Card, CardTitle } from "@/components/ui/card";
-import { getCurrentUser, getRecipes } from "@/lib/data/queries";
+import { getCurrentUser, getPreviewRecipe } from "@/lib/data/queries";
 
 export default async function NewRecipePage() {
-  const [previewRecipe, user] = await Promise.all([getRecipes().then((recipes) => recipes[0]), getCurrentUser()]);
+  const [previewRecipe, user] = await Promise.all([getPreviewRecipe(), getCurrentUser()]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-5 md:px-6">

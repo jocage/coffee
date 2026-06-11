@@ -5,10 +5,10 @@ import { CoffeeLogo } from "@/components/coffee/logo";
 import { RecipeCard } from "@/components/coffee/recipe-card";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { getRecipes } from "@/lib/data/queries";
+import { getPreviewRecipe } from "@/lib/data/queries";
 
 export default async function LandingPage() {
-  const recipes = await getRecipes();
+  const featuredRecipe = await getPreviewRecipe();
 
   return (
     <main className="min-h-dvh">
@@ -58,10 +58,10 @@ export default async function LandingPage() {
           </dl>
         </div>
         <div className="relative min-h-[520px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)]">
-          <Image src={recipes[0].coverUrl} alt="" fill priority sizes="50vw" className="object-cover" />
+          <Image src={featuredRecipe.coverUrl} alt="" fill priority sizes="50vw" className="object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
           <div className="absolute bottom-5 left-5 right-5">
-              <RecipeCard recipe={recipes[0]} compact priority />
+            <RecipeCard recipe={featuredRecipe} compact priority />
           </div>
         </div>
       </section>
