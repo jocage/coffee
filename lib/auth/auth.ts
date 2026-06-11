@@ -5,7 +5,7 @@ import { db } from "@/db";
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
 const authBaseUrl = process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-const trustedOrigins = parseTrustedOrigins([
+const staticTrustedOrigins = parseTrustedOrigins([
   authBaseUrl,
   process.env.NEXT_PUBLIC_APP_URL,
   process.env.BETTER_AUTH_TRUSTED_ORIGINS
@@ -14,7 +14,7 @@ const trustedOrigins = parseTrustedOrigins([
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET ?? "development-only-secret-change-before-production",
   baseURL: authBaseUrl,
-  trustedOrigins,
+  trustedOrigins: (request) => getTrustedOrigins(request),
   rateLimit: {
     enabled: process.env.BETTER_AUTH_RATE_LIMIT_ENABLED !== "false",
     window: parsePositiveInteger(process.env.BETTER_AUTH_RATE_LIMIT_WINDOW, 60),
@@ -36,6 +36,26 @@ export const auth = betterAuth({
         }
       : undefined
 });
+
+function getTrustedOrigins(request?: Request) {
+  return Array.from(new Set([...staticTrustedOrigins, ...getForwardedOrigins(request)]));
+}
+
+function getForwardedOrigins(request?: Request) {
+  const forwardedHost = request?.headers.get("x-forwarded-host") ?? request?.headers.get("host");
+
+  if (!forwardedHost) {
+    return [];
+  }
+
+  const forwardedProto = request?.headers.get("x-forwarded-proto") ?? (forwardedHost.includes("localhost") ? "http" : "https");
+
+  return forwardedHost
+    .split(",")
+    .map((host) => host.trim())
+    .filter(Boolean)
+    .map((host) => `${forwardedProto.split(",")[0]?.trim() || "https"}://${host}`);
+}
 
 function parseTrustedOrigins(values: Array<string | undefined>) {
   return Array.from(
