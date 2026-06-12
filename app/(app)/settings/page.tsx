@@ -20,10 +20,10 @@ const sections = [
   },
   {
     title: "Privacy",
-    description: "Default visibility is active; comment and message rules still need dedicated controls.",
+    description: "Default visibility, commenting, messages and public profile sections.",
     icon: Shield,
-    href: "/settings/profile",
-    status: "Partial"
+    href: "/settings/privacy",
+    status: "Available"
   },
   {
     title: "Units",
@@ -48,7 +48,8 @@ const sections = [
     title: "Profile visibility",
     description: "Show or hide gear and coffee collections on your public profile.",
     icon: Eye,
-    status: "Planned"
+    href: "/settings/privacy",
+    status: "Available"
   },
   {
     title: "Data and deletion",

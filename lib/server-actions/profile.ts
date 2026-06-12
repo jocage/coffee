@@ -2,8 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createCoffeeInDb, createGrinderInDb, isHandleAvailableInDb, updateProfileInDb } from "@/lib/data/repositories";
-import { onboardingInputSchema, profileInputSchema } from "@/lib/validators/profile";
+import {
+  createCoffeeInDb,
+  createGrinderInDb,
+  isHandleAvailableInDb,
+  updateProfileInDb,
+  updateProfilePrivacyInDb
+} from "@/lib/data/repositories";
+import { onboardingInputSchema, profileInputSchema, profilePrivacyInputSchema } from "@/lib/validators/profile";
 import { formDataToObject } from "@/lib/server-actions/result";
 
 export async function saveProfileAction(formData: FormData): Promise<void> {
@@ -28,6 +34,29 @@ export async function saveProfileAction(formData: FormData): Promise<void> {
   revalidatePath("/recipes/new");
   revalidatePath("/collections");
   redirect("/settings/profile?saved=1");
+}
+
+export async function savePrivacyAction(formData: FormData): Promise<void> {
+  const parsed = profilePrivacyInputSchema.safeParse({
+    ...formDataToObject(formData),
+    showGearOnProfile: formData.has("showGearOnProfile"),
+    showCoffeeOnProfile: formData.has("showCoffeeOnProfile")
+  });
+
+  if (!parsed.success) {
+    throw new Error("Privacy settings could not be saved");
+  }
+
+  await updateProfilePrivacyInDb(parsed.data);
+  revalidatePath("/settings");
+  revalidatePath("/settings/privacy");
+  revalidatePath("/profile");
+  revalidatePath("/coffees/new");
+  revalidatePath("/brews/new");
+  revalidatePath("/recipes/new");
+  revalidatePath("/collections");
+  revalidatePath("/gear");
+  redirect("/settings/privacy?saved=1");
 }
 
 export async function completeOnboardingAction(formData: FormData): Promise<void> {

@@ -1,6 +1,7 @@
 export type Visibility = "private" | "unlisted" | "followers" | "public";
 export type RemixPolicy = "none" | "with_credit" | "ask_permission";
 export type CommentPolicy = "disabled" | "followers" | "public";
+export type MessagePolicy = "none" | "followers" | "public";
 export type SocialTargetType = "recipe" | "brew_log" | "comment" | "collection" | "coffee" | "gear";
 export type BrewMethod =
   | "V60"
@@ -25,6 +26,10 @@ export type UserProfile = {
   coverUrl: string;
   verified?: boolean;
   defaultVisibility: Visibility;
+  defaultCommentPolicy: CommentPolicy;
+  messagePolicy: MessagePolicy;
+  showGearOnProfile: boolean;
+  showCoffeeOnProfile: boolean;
   favoriteMethods: BrewMethod[];
   stats: {
     recipes: number;

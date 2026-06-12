@@ -26,6 +26,10 @@ export const currentUser: UserProfile = {
   coverUrl: images.beans,
   verified: true,
   defaultVisibility: "private",
+  defaultCommentPolicy: "public",
+  messagePolicy: "followers",
+  showGearOnProfile: true,
+  showCoffeeOnProfile: true,
   favoriteMethods: ["V60", "Origami", "Kalita"],
   stats: {
     recipes: 128,
@@ -49,6 +53,10 @@ export const creators: UserProfile[] = [
     avatarUrl: images.avatarTwo,
     coverUrl: images.cafe,
     defaultVisibility: "private",
+    defaultCommentPolicy: "public",
+    messagePolicy: "followers",
+    showGearOnProfile: true,
+    showCoffeeOnProfile: true,
     favoriteMethods: ["V60", "AeroPress"],
     stats: {
       recipes: 42,

@@ -173,18 +173,19 @@ export async function getProfileContent(handle?: string) {
   if (!profile) {
     return null;
   }
+  const isOwnProfile = !handle;
 
   const [recipes, brewLogs, gear, coffees] = await Promise.all([
     getRecipesFromDb({ ownerId: profile.id }),
-    getBrewLogsFromDb(),
-    getGearFromDb(),
-    getCoffeesFromDb()
+    getBrewLogsFromDb({ ownerId: profile.id }),
+    profile.showGearOnProfile || isOwnProfile ? getGearFromDb({ ownerId: profile.id }) : Promise.resolve([]),
+    profile.showCoffeeOnProfile || isOwnProfile ? getCoffeesFromDb({ ownerId: profile.id }) : Promise.resolve([])
   ]);
 
   return {
     profile,
     recipes,
-    brewLogs: brewLogs.filter((brewLog) => brewLog.author.id === profile.id),
+    brewLogs,
     gear,
     coffees
   };

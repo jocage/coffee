@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Settings, UserPlus } from "lucide-react";
+import { Coffee, Settings, UserPlus, Wrench } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,9 @@ import { followAction } from "@/lib/server-actions/social";
 
 export function ProfileView({
   profile,
-  recipes
+  recipes,
+  gear,
+  coffees
 }: {
   profile: UserProfile;
   recipes: Recipe[];
@@ -58,11 +60,53 @@ export function ProfileView({
             ))}
           </dl>
         </Card>
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {recipes.map((recipe) => (
-            <RecipeCard key={recipe.id} recipe={recipe} />
-          ))}
-        </section>
+        <div className="grid gap-5">
+          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {recipes.map((recipe) => (
+              <RecipeCard key={recipe.id} recipe={recipe} />
+            ))}
+          </section>
+
+          {coffees.length > 0 ? (
+            <section>
+              <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold">
+                <Coffee className="h-5 w-5 text-[var(--accent)]" aria-hidden />
+                Coffees
+              </h2>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {coffees.map((coffee) => (
+                  <Card key={coffee.id} className="p-4">
+                    <Badge>{coffee.visibility}</Badge>
+                    <h3 className="mt-3 font-semibold">{coffee.name}</h3>
+                    <p className="mt-1 text-sm text-[var(--text-muted)]">{coffee.roaster} · {coffee.origin}</p>
+                    <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[var(--text-dim)]">
+                      {coffee.flavorNotes.slice(0, 3).join(" / ")}
+                    </p>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {gear.length > 0 ? (
+            <section>
+              <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold">
+                <Wrench className="h-5 w-5 text-[var(--accent)]" aria-hidden />
+                Gear
+              </h2>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {gear.map((item) => (
+                  <Card key={item.id} className="p-4">
+                    <Badge>{item.type}</Badge>
+                    <h3 className="mt-3 font-semibold">{item.name}</h3>
+                    <p className="mt-1 text-sm text-[var(--text-muted)]">{item.brand} · {item.model}</p>
+                    <p className="mt-2 text-sm text-[var(--text-dim)]">{item.notes}</p>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          ) : null}
+        </div>
       </div>
     </div>
   );

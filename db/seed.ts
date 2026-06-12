@@ -42,9 +42,30 @@ async function main() {
       location: currentUser.location,
       avatarUrl: currentUser.avatarUrl,
       coverUrl: currentUser.coverUrl,
+      defaultVisibility: currentUser.defaultVisibility,
+      defaultCommentPolicy: currentUser.defaultCommentPolicy,
+      messagePolicy: currentUser.messagePolicy,
+      showGearOnProfile: currentUser.showGearOnProfile,
+      showCoffeeOnProfile: currentUser.showCoffeeOnProfile,
       favoriteMethods: currentUser.favoriteMethods
     })
-    .onConflictDoNothing();
+    .onConflictDoUpdate({
+      target: profiles.id,
+      set: {
+        handle: currentUser.handle,
+        displayName: currentUser.displayName,
+        bio: currentUser.bio,
+        location: currentUser.location,
+        avatarUrl: currentUser.avatarUrl,
+        coverUrl: currentUser.coverUrl,
+        defaultVisibility: currentUser.defaultVisibility,
+        defaultCommentPolicy: currentUser.defaultCommentPolicy,
+        messagePolicy: currentUser.messagePolicy,
+        showGearOnProfile: currentUser.showGearOnProfile,
+        showCoffeeOnProfile: currentUser.showCoffeeOnProfile,
+        favoriteMethods: currentUser.favoriteMethods
+      }
+    });
 
   await db
     .insert(coffeeBeans)

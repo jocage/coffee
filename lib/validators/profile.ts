@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { brewMethodSchema, visibilitySchema } from "@/lib/validators/recipes";
 
+export const profileCommentPolicySchema = z.enum(["disabled", "followers", "public"]);
+export const messagePolicySchema = z.enum(["none", "followers", "public"]);
+
 export const handleSchema = z
   .string()
   .trim()
@@ -20,6 +23,14 @@ export const profileInputSchema = z.object({
   coverAssetId: z.string().trim().optional(),
   defaultVisibility: visibilitySchema.default("private"),
   favoriteMethods: z.array(brewMethodSchema).default([])
+});
+
+export const profilePrivacyInputSchema = z.object({
+  defaultVisibility: visibilitySchema.default("private"),
+  defaultCommentPolicy: profileCommentPolicySchema.default("public"),
+  messagePolicy: messagePolicySchema.default("followers"),
+  showGearOnProfile: z.coerce.boolean().default(false),
+  showCoffeeOnProfile: z.coerce.boolean().default(false)
 });
 
 export const onboardingInputSchema = profileInputSchema.extend({

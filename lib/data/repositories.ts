@@ -47,6 +47,7 @@ import type {
   Collection,
   CollectionItem,
   Comment,
+  CommentPolicy,
   ContentReport,
   Conversation,
   BrewMethod,
@@ -58,6 +59,7 @@ import type {
   GearType,
   GrinderCatalogItem,
   GrinderCatalogStatus,
+  MessagePolicy,
   Notification,
   Recipe,
   RecipeStep,
@@ -73,6 +75,7 @@ import { calculateRatio } from "@/modules/recipes/recipe-math";
 
 export const DEV_USER_ID = "dev-user";
 export const DEV_PROFILE_ID = "dev-profile";
+let e2eSeedPromise: Promise<void> | null = null;
 export class AuthRequiredError extends Error {
   constructor() {
     super("Authentication required.");
@@ -894,6 +897,9 @@ export async function createRecipeInDb(input: {
   }>;
 }) {
   const viewerId = await ensureCurrentIdentity();
+  const viewerProfile = await db.query.profiles.findFirst({
+    where: eq(profiles.userId, viewerId)
+  });
   const [coffee] = await getCoffeesFromDb();
   const recipeId = crypto.randomUUID();
   const slug = slugify(input.title);
@@ -908,6 +914,7 @@ export async function createRecipeInDb(input: {
     description: input.description ?? "",
     method: input.method,
     visibility: input.visibility,
+    commentPolicy: viewerProfile?.defaultCommentPolicy ?? "public",
     coverAssetId: input.coverAssetId || null,
     coverUrl: input.coverUrl || seedRecipes[0].coverUrl,
     doseGrams: input.doseGrams,
@@ -1270,6 +1277,10 @@ export async function updateProfileInDb(input: {
       coverUrl: input.coverUrl || existingProfile?.coverUrl || seedCurrentUser.coverUrl,
       coverAssetId: input.coverAssetId || existingProfile?.coverAssetId || null,
       defaultVisibility: input.defaultVisibility ?? existingProfile?.defaultVisibility ?? "private",
+      defaultCommentPolicy: existingProfile?.defaultCommentPolicy ?? "public",
+      messagePolicy: existingProfile?.messagePolicy ?? "followers",
+      showGearOnProfile: existingProfile?.showGearOnProfile ?? true,
+      showCoffeeOnProfile: existingProfile?.showCoffeeOnProfile ?? true,
       favoriteMethods:
         input.favoriteMethods ??
         (existingProfile?.favoriteMethods as BrewMethod[] | undefined) ??
@@ -1279,6 +1290,28 @@ export async function updateProfileInDb(input: {
     .where(eq(profiles.userId, viewerId));
 
   return { handle: input.handle.toLowerCase() };
+}
+
+export async function updateProfilePrivacyInDb(input: {
+  defaultVisibility: Visibility;
+  defaultCommentPolicy: CommentPolicy;
+  messagePolicy: MessagePolicy;
+  showGearOnProfile: boolean;
+  showCoffeeOnProfile: boolean;
+}) {
+  const viewerId = await ensureCurrentIdentity();
+
+  await db
+    .update(profiles)
+    .set({
+      defaultVisibility: input.defaultVisibility,
+      defaultCommentPolicy: input.defaultCommentPolicy,
+      messagePolicy: input.messagePolicy,
+      showGearOnProfile: input.showGearOnProfile,
+      showCoffeeOnProfile: input.showCoffeeOnProfile,
+      updatedAt: new Date()
+    })
+    .where(eq(profiles.userId, viewerId));
 }
 
 export async function isHandleAvailableInDb(handle: string, ownerUserId = DEV_USER_ID) {
@@ -2081,6 +2114,11 @@ export async function ensureDevIdentity() {
       location: seedCurrentUser.location,
       avatarUrl: seedCurrentUser.avatarUrl,
       coverUrl: seedCurrentUser.coverUrl,
+      defaultVisibility: seedCurrentUser.defaultVisibility,
+      defaultCommentPolicy: seedCurrentUser.defaultCommentPolicy,
+      messagePolicy: seedCurrentUser.messagePolicy,
+      showGearOnProfile: seedCurrentUser.showGearOnProfile,
+      showCoffeeOnProfile: seedCurrentUser.showCoffeeOnProfile,
       favoriteMethods: seedCurrentUser.favoriteMethods
     })
     .onConflictDoNothing();
@@ -2089,6 +2127,11 @@ export async function ensureDevIdentity() {
     return;
   }
 
+  e2eSeedPromise ??= seedE2eDemoData();
+  await e2eSeedPromise;
+}
+
+async function seedE2eDemoData() {
   await db
     .insert(coffeeBeans)
     .values(
@@ -2362,6 +2405,10 @@ function mapProfile(row: DbProfile): UserProfile {
     avatarUrl: row.avatarUrl || seedCurrentUser.avatarUrl,
     coverUrl: row.coverUrl || seedCurrentUser.coverUrl,
     defaultVisibility: row.defaultVisibility,
+    defaultCommentPolicy: row.defaultCommentPolicy ?? "public",
+    messagePolicy: row.messagePolicy ?? "followers",
+    showGearOnProfile: row.showGearOnProfile ?? true,
+    showCoffeeOnProfile: row.showCoffeeOnProfile ?? true,
     favoriteMethods: row.favoriteMethods as BrewMethod[],
     stats: {
       recipes: 0,

@@ -1,4 +1,4 @@
-import { index, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, index, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { user } from "@/db/schema/auth";
 
 export const visibilityEnum = pgEnum("visibility", ["private", "unlisted", "followers", "public"]);
@@ -18,6 +18,16 @@ export const profiles = pgTable(
     avatarUrl: text("avatar_url").notNull().default(""),
     coverUrl: text("cover_url").notNull().default(""),
     defaultVisibility: visibilityEnum("default_visibility").notNull().default("private"),
+    defaultCommentPolicy: text("default_comment_policy")
+      .$type<"disabled" | "followers" | "public">()
+      .notNull()
+      .default("public"),
+    messagePolicy: text("message_policy")
+      .$type<"none" | "followers" | "public">()
+      .notNull()
+      .default("followers"),
+    showGearOnProfile: boolean("show_gear_on_profile").notNull().default(true),
+    showCoffeeOnProfile: boolean("show_coffee_on_profile").notNull().default(true),
     favoriteMethods: jsonb("favorite_methods").$type<string[]>().notNull().default([]),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()

@@ -33,19 +33,26 @@ test("onboarding renders profile setup controls", async ({ page }) => {
 });
 
 test("profile privacy defaults apply to new content forms", async ({ page }) => {
-  await page.goto("/settings/profile");
-  await page.getByLabel("Default privacy").selectOption("public");
+  await page.goto("/settings/privacy");
+  await page.getByLabel("Default content visibility").selectOption("public");
+  await page.getByLabel("Who can comment").selectOption("followers");
+  await page.getByLabel("Who can message").selectOption("none");
+  await page.getByLabel(/Show gear on profile/).setChecked(false);
+  await page.getByLabel(/Show coffee on profile/).setChecked(false);
   await Promise.all([
-    page.waitForURL("**/settings/profile?saved=1"),
-    page.getByRole("button", { name: "Save profile" }).click()
+    page.waitForURL("**/settings/privacy?saved=1"),
+    page.getByRole("button", { name: "Save privacy" }).click()
   ]);
-  await expect(page.getByRole("status")).toContainText("Profile settings saved.");
+  await expect(page.getByRole("status")).toContainText("Privacy settings saved.");
+  await expect(page.getByLabel("Who can comment")).toHaveValue("followers");
+  await expect(page.getByLabel("Who can message")).toHaveValue("none");
 
-  await page.goto("/coffees/new");
+  await page.goto("/recipes/new");
   await expect(page.getByLabel("Visibility")).toHaveValue("public");
 
-  await page.goto("/brews/new");
-  await expect(page.getByLabel("Visibility")).toHaveValue("public");
+  await page.goto("/u/tetsu");
+  await expect(page.getByRole("heading", { name: "Coffees" })).toBeHidden();
+  await expect(page.getByRole("heading", { name: "Gear" })).toBeHidden();
 });
 
 test("coffee form persists a new coffee", async ({ page }) => {
