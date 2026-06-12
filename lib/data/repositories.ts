@@ -312,7 +312,7 @@ export async function getGrinderCatalogFromDb(filters?: {
   query?: string;
   status?: GrinderCatalogStatus | "all";
 }): Promise<GrinderCatalogItem[]> {
-  return withSeedFallback(async () => {
+  try {
     const where = and(
       filters?.status && filters.status !== "all"
         ? eq(grinderCatalogItems.status, filters.status)
@@ -340,31 +340,40 @@ export async function getGrinderCatalogFromDb(filters?: {
     }
 
     return rows.map(mapGrinderCatalogItem);
-  }, filterSeedGrinderCatalog(filters));
+  } catch (error) {
+    if (isMissingCatalogTableError(error)) {
+      return filterSeedGrinderCatalog(filters);
+    }
+
+    throw error;
+  }
 }
 
 export async function getGrinderCatalogItemByIdFromDb(
   id: string
 ): Promise<GrinderCatalogItem | null> {
-  return withSeedFallback(
-    async () => {
-      const row = await db.query.grinderCatalogItems.findFirst({
-        where: eq(grinderCatalogItems.id, id)
-      });
+  try {
+    const row = await db.query.grinderCatalogItems.findFirst({
+      where: eq(grinderCatalogItems.id, id)
+    });
 
-      return row
-        ? mapGrinderCatalogItem(row)
-        : (seedGrinderCatalog.find((item) => item.id === id) ?? null);
-    },
-    seedGrinderCatalog.find((item) => item.id === id) ?? null
-  );
+    return row
+      ? mapGrinderCatalogItem(row)
+      : (seedGrinderCatalog.find((item) => item.id === id) ?? null);
+  } catch (error) {
+    if (isMissingCatalogTableError(error)) {
+      return seedGrinderCatalog.find((item) => item.id === id) ?? null;
+    }
+
+    throw error;
+  }
 }
 
 export async function getDripperCatalogFromDb(filters?: {
   query?: string;
   status?: DripperCatalogStatus | "all";
 }): Promise<DripperCatalogItem[]> {
-  return withSeedFallback(async () => {
+  try {
     const where = and(
       filters?.status && filters.status !== "all"
         ? eq(dripperCatalogItems.status, filters.status)
@@ -393,24 +402,33 @@ export async function getDripperCatalogFromDb(filters?: {
     }
 
     return rows.map(mapDripperCatalogItem);
-  }, filterSeedDripperCatalog(filters));
+  } catch (error) {
+    if (isMissingCatalogTableError(error)) {
+      return filterSeedDripperCatalog(filters);
+    }
+
+    throw error;
+  }
 }
 
 export async function getDripperCatalogItemByIdFromDb(
   id: string
 ): Promise<DripperCatalogItem | null> {
-  return withSeedFallback(
-    async () => {
-      const row = await db.query.dripperCatalogItems.findFirst({
-        where: eq(dripperCatalogItems.id, id)
-      });
+  try {
+    const row = await db.query.dripperCatalogItems.findFirst({
+      where: eq(dripperCatalogItems.id, id)
+    });
 
-      return row
-        ? mapDripperCatalogItem(row)
-        : (seedDripperCatalog.find((item) => item.id === id) ?? null);
-    },
-    seedDripperCatalog.find((item) => item.id === id) ?? null
-  );
+    return row
+      ? mapDripperCatalogItem(row)
+      : (seedDripperCatalog.find((item) => item.id === id) ?? null);
+  } catch (error) {
+    if (isMissingCatalogTableError(error)) {
+      return seedDripperCatalog.find((item) => item.id === id) ?? null;
+    }
+
+    throw error;
+  }
 }
 
 export async function getCollectionsFromDb(): Promise<Collection[]> {
@@ -2728,6 +2746,20 @@ async function withSeedFallback<T>(operation: () => Promise<T>, fallback: T): Pr
 
     return fallback;
   }
+}
+
+function isMissingCatalogTableError(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const code = "code" in error ? String(error.code) : "";
+  const message = "message" in error ? String(error.message) : "";
+
+  return (
+    code === "42P01" &&
+    (message.includes("grinder_catalog_items") || message.includes("dripper_catalog_items"))
+  );
 }
 
 function shouldUseDemoData() {
