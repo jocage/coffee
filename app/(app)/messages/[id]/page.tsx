@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/form";
 import { getConversationById } from "@/lib/data/queries";
-import { sendMessageAction } from "@/lib/server-actions/community";
 
 export default async function ConversationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -29,9 +28,7 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
           <Bubble align="left" body={conversation.lastMessage} />
           <Bubble align="right" body="I will test it tomorrow and send brew notes." />
         </div>
-        <form action={sendMessageAction} className="grid gap-3 sm:grid-cols-[1fr_auto]">
-          <input type="hidden" name="conversationId" value={conversation.id} />
-          <input type="hidden" name="path" value={`/messages/${conversation.id}`} />
+        <form action={`/messages/${conversation.id}/send`} method="post" className="grid gap-3 sm:grid-cols-[1fr_auto]">
           <Input name="body" placeholder="Write a message..." aria-label="Write a message" />
           <Button type="submit" icon={<Send className="h-4 w-4" aria-hidden />}>Send</Button>
         </form>

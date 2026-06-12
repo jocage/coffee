@@ -26,7 +26,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
         <div className="flex items-center justify-between gap-3">
           <CardTitle>Latest {unreadCount > 0 ? `(${unreadCount} unread)` : ""}</CardTitle>
           <form action={markNotificationsReadAction}>
-            <Button type="submit" variant="secondary" size="sm" disabled={notifications.length === 0 || unreadCount === 0}>Mark all read</Button>
+            <Button type="submit" variant="secondary" size="sm" disabled={notifications.length === 0}>Mark all read</Button>
           </form>
         </div>
         <div className="mt-4 grid gap-2">

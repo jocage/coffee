@@ -96,9 +96,9 @@ export default async function NewGrinderPage({
               <CardTitle className="mb-0">Add to catalog</CardTitle>
             </div>
             <form action={addGrinderToCatalogAction} className="grid gap-3">
-              <Field id="catalog-name" name="name" label="Name" placeholder="Comandante C40" />
-              <Field id="catalog-brand" name="brand" label="Brand" placeholder="Comandante" />
-              <Field id="catalog-model" name="model" label="Model" placeholder="C40 MK4" />
+              <Field id="catalog-name" name="name" label="Catalog title" placeholder="Comandante C40" />
+              <Field id="catalog-brand" name="brand" label="Maker" placeholder="Comandante" />
+              <Field id="catalog-model" name="model" label="Catalog version" placeholder="C40 MK4" />
               <div>
                 <Label htmlFor="catalog-drive">Drive</Label>
                 <Select id="catalog-drive" name="grinderDrive" defaultValue="manual">

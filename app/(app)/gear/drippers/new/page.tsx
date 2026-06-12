@@ -98,16 +98,16 @@ export default async function NewDripperPage({
               <CardTitle className="mb-0">Add to catalog</CardTitle>
             </div>
             <form action={addDripperToCatalogAction} className="grid gap-3">
-              <Field id="catalog-name" name="name" label="Name" placeholder="Orea V4 Wide" />
-              <Field id="catalog-brand" name="brand" label="Brand" placeholder="Orea" />
-              <Field id="catalog-model" name="model" label="Model" placeholder="V4 Wide" />
+              <Field id="catalog-name" name="name" label="Catalog title" placeholder="Orea V4 Wide" />
+              <Field id="catalog-brand" name="brand" label="Maker" placeholder="Orea" />
+              <Field id="catalog-model" name="model" label="Catalog version" placeholder="V4 Wide" />
               <Field
                 id="catalog-material"
                 name="material"
-                label="Material"
+                label="Construction"
                 placeholder="Plastic, ceramic, glass"
               />
-              <Field id="catalog-size" name="size" label="Size" placeholder="02, M, 185, Wide" />
+              <Field id="catalog-size" name="size" label="Catalog scale" placeholder="02, M, 185, Wide" />
               <Field
                 id="catalog-brew-speed"
                 name="brewSpeed"
@@ -117,7 +117,7 @@ export default async function NewDripperPage({
               <Field
                 id="catalog-compatible-filters"
                 name="compatibleFilters"
-                label="Compatible filters"
+                label="Filter fit"
                 placeholder="V60 02, Kalita 185"
               />
               <div>

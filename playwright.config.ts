@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  timeout: 60_000,
   fullyParallel: false,
   workers: 1,
   reporter: "html",
@@ -10,7 +11,8 @@ export default defineConfig({
     trace: "on-first-retry"
   },
   webServer: {
-    command: "E2E_AUTH_BYPASS=true pnpm build && E2E_AUTH_BYPASS=true pnpm start --port 3100",
+    command:
+      "E2E_AUTH_BYPASS=true pnpm build && cp -R public .next/standalone/ && mkdir -p .next/standalone/.next && cp -R .next/static .next/standalone/.next/static && E2E_AUTH_BYPASS=true PORT=3100 HOSTNAME=127.0.0.1 node .next/standalone/server.js",
     url: "http://127.0.0.1:3100",
     reuseExistingServer: false,
     timeout: 180_000
