@@ -18,11 +18,52 @@ export const gearInputSchema = z.object({
   compatibleDrippers: z.string().trim().max(160).optional(),
   notes: z.string().trim().max(600).optional(),
   imageUrl: z.string().trim().optional(),
-  defaultForMethod: z.enum(["V60", "Origami", "Kalita", "AeroPress", "Espresso", "French Press", "Switch"]).optional(),
+  defaultForMethod: z
+    .enum(["V60", "Origami", "Kalita", "AeroPress", "Espresso", "French Press", "Switch"])
+    .optional(),
   visibility: visibilitySchema.default("private")
 });
 
 export const grinderInputSchema = gearInputSchema.extend({
   type: z.literal("grinder").default("grinder"),
   grinderDrive: z.enum(["manual", "electric"]).default("manual")
+});
+
+export const grinderCatalogInputSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  brand: z.string().trim().min(2).max(120),
+  model: z.string().trim().min(1).max(120),
+  grinderDrive: z.enum(["manual", "electric"]).default("manual"),
+  burrType: z.string().trim().max(80).optional(),
+  filterRange: z.string().trim().max(80).optional(),
+  notes: z.string().trim().max(600).optional(),
+  imageUrl: z.string().trim().optional()
+});
+
+export const addGrinderFromCatalogSchema = z.object({
+  catalogItemId: z.string().min(1),
+  defaultForMethod: z
+    .enum(["V60", "Origami", "Kalita", "AeroPress", "Espresso", "French Press", "Switch"])
+    .optional(),
+  visibility: visibilitySchema.default("private")
+});
+
+export const dripperCatalogInputSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  brand: z.string().trim().min(2).max(120),
+  model: z.string().trim().min(1).max(120),
+  material: z.string().trim().max(80).optional(),
+  size: z.string().trim().max(80).optional(),
+  brewSpeed: z.string().trim().max(80).optional(),
+  compatibleFilters: z.string().trim().max(160).optional(),
+  notes: z.string().trim().max(600).optional(),
+  imageUrl: z.string().trim().optional()
+});
+
+export const addDripperFromCatalogSchema = z.object({
+  catalogItemId: z.string().min(1),
+  defaultForMethod: z
+    .enum(["V60", "Origami", "Kalita", "AeroPress", "Espresso", "French Press", "Switch"])
+    .optional(),
+  visibility: visibilitySchema.default("private")
 });

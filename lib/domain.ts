@@ -2,7 +2,14 @@ export type Visibility = "private" | "unlisted" | "followers" | "public";
 export type RemixPolicy = "none" | "with_credit" | "ask_permission";
 export type CommentPolicy = "disabled" | "followers" | "public";
 export type SocialTargetType = "recipe" | "brew_log" | "comment" | "collection" | "coffee" | "gear";
-export type BrewMethod = "V60" | "Origami" | "Kalita" | "AeroPress" | "Espresso" | "French Press" | "Switch";
+export type BrewMethod =
+  | "V60"
+  | "Origami"
+  | "Kalita"
+  | "AeroPress"
+  | "Espresso"
+  | "French Press"
+  | "Switch";
 export type RoastLevel = "light" | "medium-light" | "medium" | "medium-dark" | "dark";
 export type GearType = "grinder" | "dripper" | "filter" | "kettle" | "scale" | "server";
 
@@ -71,6 +78,37 @@ export type GearItem = {
   imageUrl: string;
   visibility: Visibility;
   defaultForMethod?: BrewMethod;
+};
+
+export type GrinderCatalogStatus = "pending" | "approved" | "rejected";
+
+export type GrinderCatalogItem = {
+  id: string;
+  name: string;
+  brand: string;
+  model: string;
+  grinderDrive: "manual" | "electric";
+  burrType: string;
+  filterRange: string;
+  notes: string;
+  imageUrl: string;
+  status: GrinderCatalogStatus;
+};
+
+export type DripperCatalogStatus = "pending" | "approved" | "rejected";
+
+export type DripperCatalogItem = {
+  id: string;
+  name: string;
+  brand: string;
+  model: string;
+  material: string;
+  size: string;
+  brewSpeed: string;
+  compatibleFilters: string;
+  notes: string;
+  imageUrl: string;
+  status: DripperCatalogStatus;
 };
 
 export type Recipe = {
@@ -149,7 +187,12 @@ export type FeedItem =
       createdAt: string;
     };
 
-export type ExportFormat = "instagram-post" | "instagram-story" | "square" | "transparent-png" | "print-a4";
+export type ExportFormat =
+  | "instagram-post"
+  | "instagram-story"
+  | "square"
+  | "transparent-png"
+  | "print-a4";
 export type ExportTheme = "mocha" | "midnight" | "latte" | "forest" | "sakura";
 
 export type ExportPreset = {
@@ -208,7 +251,16 @@ export type Conversation = {
 
 export type Notification = {
   id: string;
-  type: "follow" | "like" | "comment" | "reply" | "recipe_brewed" | "recipe_remixed" | "mention" | "challenge" | "system";
+  type:
+    | "follow"
+    | "like"
+    | "comment"
+    | "reply"
+    | "recipe_brewed"
+    | "recipe_remixed"
+    | "mention"
+    | "challenge"
+    | "system";
   actor?: UserProfile;
   title: string;
   body: string;

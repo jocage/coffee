@@ -50,6 +50,20 @@
       "when": 1781203200000,
       "tag": "0006_espresso_brew_logs",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1781260026361,
+      "tag": "0007_outgoing_squirrel_girl",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1781260604161,
+      "tag": "0008_parallel_ben_urich",
+      "breakpoints": true
     }
   ]
 }

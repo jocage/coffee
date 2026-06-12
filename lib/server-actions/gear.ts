@@ -2,9 +2,23 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createGearItemInDb, deleteGearItemInDb, updateGearItemInDb } from "@/lib/data/repositories";
+import {
+  createDripperCatalogItemInDb,
+  createGearItemFromDripperCatalogInDb,
+  createGearItemFromGrinderCatalogInDb,
+  createGearItemInDb,
+  createGrinderCatalogItemInDb,
+  deleteGearItemInDb,
+  updateGearItemInDb
+} from "@/lib/data/repositories";
 import { formDataToObject } from "@/lib/server-actions/result";
-import { gearInputSchema } from "@/lib/validators/gear";
+import {
+  addDripperFromCatalogSchema,
+  addGrinderFromCatalogSchema,
+  dripperCatalogInputSchema,
+  gearInputSchema,
+  grinderCatalogInputSchema
+} from "@/lib/validators/gear";
 
 export async function saveGearAction(formData: FormData): Promise<void> {
   const raw = formDataToObject(formData);
@@ -46,6 +60,70 @@ export async function updateGearAction(formData: FormData): Promise<void> {
 
 export const saveGrinderAction = saveGearAction;
 export const updateGrinderAction = updateGearAction;
+
+export async function addGrinderFromCatalogAction(formData: FormData): Promise<void> {
+  const raw = formDataToObject(formData);
+  const parsed = addGrinderFromCatalogSchema.safeParse({
+    ...raw,
+    defaultForMethod: raw.defaultForMethod || undefined
+  });
+
+  if (!parsed.success) {
+    throw new Error("Catalog grinder could not be added");
+  }
+
+  await createGearItemFromGrinderCatalogInDb(parsed.data);
+  revalidatePath("/gear");
+  revalidatePath("/gear/grinders/new");
+  revalidatePath("/recipes/new");
+  revalidatePath("/brews/new");
+  redirect("/gear");
+}
+
+export async function addGrinderToCatalogAction(formData: FormData): Promise<void> {
+  const raw = formDataToObject(formData);
+  const parsed = grinderCatalogInputSchema.safeParse(raw);
+
+  if (!parsed.success) {
+    throw new Error("Catalog grinder could not be saved");
+  }
+
+  await createGrinderCatalogItemInDb(parsed.data);
+  revalidatePath("/gear/grinders/new");
+  redirect("/gear/grinders/new");
+}
+
+export async function addDripperFromCatalogAction(formData: FormData): Promise<void> {
+  const raw = formDataToObject(formData);
+  const parsed = addDripperFromCatalogSchema.safeParse({
+    ...raw,
+    defaultForMethod: raw.defaultForMethod || undefined
+  });
+
+  if (!parsed.success) {
+    throw new Error("Catalog dripper could not be added");
+  }
+
+  await createGearItemFromDripperCatalogInDb(parsed.data);
+  revalidatePath("/gear");
+  revalidatePath("/gear/drippers/new");
+  revalidatePath("/recipes/new");
+  revalidatePath("/brews/new");
+  redirect("/gear");
+}
+
+export async function addDripperToCatalogAction(formData: FormData): Promise<void> {
+  const raw = formDataToObject(formData);
+  const parsed = dripperCatalogInputSchema.safeParse(raw);
+
+  if (!parsed.success) {
+    throw new Error("Catalog dripper could not be saved");
+  }
+
+  await createDripperCatalogItemInDb(parsed.data);
+  revalidatePath("/gear/drippers/new");
+  redirect("/gear/drippers/new");
+}
 
 export async function deleteGearItemAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");

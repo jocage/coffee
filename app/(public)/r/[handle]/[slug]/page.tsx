@@ -12,7 +12,12 @@ import { TasteRadar } from "@/components/coffee/taste-radar";
 import { AddToCollectionForm } from "@/components/social/add-to-collection-form";
 import { CommentThread } from "@/components/social/comment-thread";
 import { ReportForm } from "@/components/social/report-form";
-import { getCollections, getCommentsForTarget, getPublicRecipe, getSocialCountsForTarget } from "@/lib/data/queries";
+import {
+  getCollections,
+  getCommentsForTarget,
+  getPublicRecipe,
+  getSocialCountsForTarget
+} from "@/lib/data/queries";
 import { formatDuration, formatRatio } from "@/lib/format";
 import { remixRecipeAction } from "@/lib/server-actions/recipes";
 import { likeAction, saveTargetAction } from "@/lib/server-actions/social";
@@ -69,7 +74,9 @@ export default async function PublicRecipePage({ params }: { params: Promise<Par
                 <Avatar src={recipe.author.avatarUrl} alt={recipe.author.displayName} size="sm" />
                 <span>
                   <span className="block text-sm font-semibold">{recipe.author.displayName}</span>
-                  <span className="block text-xs text-[var(--text-dim)]">@{recipe.author.handle}</span>
+                  <span className="block text-xs text-[var(--text-dim)]">
+                    @{recipe.author.handle}
+                  </span>
                 </span>
               </Link>
               <div className="mt-6 flex flex-wrap gap-2">
@@ -79,7 +86,14 @@ export default async function PublicRecipePage({ params }: { params: Promise<Par
               </div>
             </div>
             <div className="relative min-h-[360px]">
-              <Image src={recipe.coverUrl} alt="" fill priority sizes="60vw" className="object-cover" />
+              <Image
+                src={recipe.coverUrl}
+                alt=""
+                fill
+                priority
+                sizes="60vw"
+                className="object-cover"
+              />
             </div>
           </div>
         </Card>
@@ -116,6 +130,7 @@ export default async function PublicRecipePage({ params }: { params: Promise<Par
               ["Ratio", formatRatio(recipe.doseGrams, recipe.waterGrams)],
               ["Temp", `${recipe.temperatureCelsius}C`],
               ["Grind", recipe.grindLabel],
+              ["Setting", recipe.grindSetting || "Not set"],
               ["Time", formatDuration(recipe.totalTimeSeconds)]
             ].map(([label, value]) => (
               <div key={label} className="rounded-[var(--radius-sm)] bg-white/5 p-3">
@@ -133,42 +148,83 @@ export default async function PublicRecipePage({ params }: { params: Promise<Par
                 <input type="hidden" name="targetType" value="recipe" />
                 <input type="hidden" name="targetId" value={recipe.id} />
                 <input type="hidden" name="path" value={path} />
-                <Button variant="secondary" size="icon" aria-label="Save" icon={<Bookmark className="h-4 w-4" aria-hidden />} />
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  aria-label="Save"
+                  icon={<Bookmark className="h-4 w-4" aria-hidden />}
+                />
               </form>
               <form action={likeAction}>
                 <input type="hidden" name="targetType" value="recipe" />
                 <input type="hidden" name="targetId" value={recipe.id} />
                 <input type="hidden" name="path" value={path} />
-                <Button variant="secondary" size="icon" aria-label="Like" icon={<Star className="h-4 w-4" aria-hidden />} />
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  aria-label="Like"
+                  icon={<Star className="h-4 w-4" aria-hidden />}
+                />
               </form>
               <form action={remixRecipeAction}>
                 <input type="hidden" name="recipeId" value={recipe.id} />
                 <input type="hidden" name="path" value={path} />
-                <Button variant="secondary" size="icon" aria-label="Remix" icon={<Repeat2 className="h-4 w-4" aria-hidden />} />
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  aria-label="Remix"
+                  icon={<Repeat2 className="h-4 w-4" aria-hidden />}
+                />
               </form>
-              <Button variant="secondary" size="icon" aria-label="Open comments" icon={<MessageCircle className="h-4 w-4" aria-hidden />} />
+              <Button
+                variant="secondary"
+                size="icon"
+                aria-label="Open comments"
+                icon={<MessageCircle className="h-4 w-4" aria-hidden />}
+              />
             </div>
           </div>
         </Card>
         <Card>
           <CardTitle>Social proof</CardTitle>
           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-            <Metric icon={<Star className="h-4 w-4 fill-current" />} value={recipe.stats.averageRating.toFixed(1)} label="Rating" />
+            <Metric
+              icon={<Star className="h-4 w-4 fill-current" />}
+              value={recipe.stats.averageRating.toFixed(1)}
+              label="Rating"
+            />
             <Metric value={recipe.stats.brews.toLocaleString()} label="Brews" />
-            <Metric value={(recipe.stats.saves + socialCounts.saves).toLocaleString()} label="Saves" />
-            <Metric value={(recipe.stats.comments + socialCounts.comments).toLocaleString()} label="Comments" />
+            <Metric
+              value={(recipe.stats.saves + socialCounts.saves).toLocaleString()}
+              label="Saves"
+            />
+            <Metric
+              value={(recipe.stats.comments + socialCounts.comments).toLocaleString()}
+              label="Comments"
+            />
           </div>
         </Card>
         <Card>
           <CardTitle>Add to collection</CardTitle>
-          <AddToCollectionForm collections={collections} targetType="recipe" targetId={recipe.id} path={path} />
+          <AddToCollectionForm
+            collections={collections}
+            targetType="recipe"
+            targetId={recipe.id}
+            path={path}
+          />
         </Card>
         <Card>
           <CardTitle>Report</CardTitle>
           <ReportForm targetType="recipe" targetId={recipe.id} path={path} />
         </Card>
         <Card>
-          <CommentThread comments={comments} targetType="recipe" targetId={recipe.id} path={path} label="Recipe comment" />
+          <CommentThread
+            comments={comments}
+            targetType="recipe"
+            targetId={recipe.id}
+            path={path}
+            label="Recipe comment"
+          />
         </Card>
       </aside>
     </main>

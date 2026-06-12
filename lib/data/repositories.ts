@@ -7,8 +7,13 @@ import { user } from "@/db/schema/auth";
 import { brewLogs as brewLogsTable } from "@/db/schema/brews";
 import { coffeeBeans } from "@/db/schema/coffee";
 import { collectionItems, collections as collectionsTable } from "@/db/schema/collections";
-import { challengeEntries, challenges as challengesTable, clubMembers, clubs as clubsTable } from "@/db/schema/clubs";
-import { gearItems } from "@/db/schema/gear";
+import {
+  challengeEntries,
+  challenges as challengesTable,
+  clubMembers,
+  clubs as clubsTable
+} from "@/db/schema/clubs";
+import { dripperCatalogItems, gearItems, grinderCatalogItems } from "@/db/schema/gear";
 import { profiles } from "@/db/schema/profiles";
 import { recipeSteps, recipes as recipesTable } from "@/db/schema/recipes";
 import {
@@ -29,7 +34,9 @@ import {
   coffees as seedCoffees,
   conversations as seedConversations,
   currentUser as seedCurrentUser,
+  dripperCatalog as seedDripperCatalog,
   gear as seedGear,
+  grinderCatalog as seedGrinderCatalog,
   notifications as seedNotifications,
   recipes as seedRecipes
 } from "@/lib/data/seed";
@@ -44,9 +51,13 @@ import type {
   Conversation,
   BrewMethod,
   CoffeeBean,
+  DripperCatalogItem,
+  DripperCatalogStatus,
   FeedItem,
   GearItem,
   GearType,
+  GrinderCatalogItem,
+  GrinderCatalogStatus,
   Notification,
   Recipe,
   RecipeStep,
@@ -72,6 +83,8 @@ export class AuthRequiredError extends Error {
 type DbProfile = typeof profiles.$inferSelect;
 type DbCoffee = typeof coffeeBeans.$inferSelect;
 type DbGear = typeof gearItems.$inferSelect;
+type DbDripperCatalogItem = typeof dripperCatalogItems.$inferSelect;
+type DbGrinderCatalogItem = typeof grinderCatalogItems.$inferSelect;
 type DbRecipe = typeof recipesTable.$inferSelect;
 type DbRecipeStep = typeof recipeSteps.$inferSelect;
 type DbBrewLog = typeof brewLogsTable.$inferSelect;
@@ -118,7 +131,9 @@ export async function getRecipesFromDb(filters?: {
   return withSeedFallback(async () => {
     const where = and(
       filters?.method ? eq(recipesTable.method, filters.method) : undefined,
-      filters?.visibility && filters.visibility !== "all" ? eq(recipesTable.visibility, filters.visibility) : undefined,
+      filters?.visibility && filters.visibility !== "all"
+        ? eq(recipesTable.visibility, filters.visibility)
+        : undefined,
       filters?.ownerId ? eq(recipesTable.ownerId, filters.ownerId) : undefined,
       filters?.query
         ? or(
@@ -149,7 +164,13 @@ export async function getRecipesFromDb(filters?: {
     const gear = await getGearFromDb();
 
     return rows.map((row) =>
-      mapRecipe(row.recipe, row.profile, row.coffee ?? seedCoffees[0], steps.get(row.recipe.id) ?? [], gear)
+      mapRecipe(
+        row.recipe,
+        row.profile,
+        row.coffee ?? seedCoffees[0],
+        steps.get(row.recipe.id) ?? [],
+        gear
+      )
     );
   }, seedRecipes);
 }
@@ -160,28 +181,47 @@ export async function getRecipeByIdFromDb(id: string): Promise<Recipe | null> {
 }
 
 export async function getPublicRecipeFromDb(handle: string, slug: string): Promise<Recipe | null> {
-  return withSeedFallback(async () => {
-    const rows = await db
-      .select({
-        recipe: recipesTable,
-        profile: profiles,
-        coffee: coffeeBeans
-      })
-      .from(recipesTable)
-      .innerJoin(profiles, eq(recipesTable.ownerId, profiles.userId))
-      .leftJoin(coffeeBeans, eq(recipesTable.coffeeId, coffeeBeans.id))
-      .where(and(eq(profiles.handle, handle), eq(recipesTable.slug, slug), eq(recipesTable.visibility, "public")))
-      .limit(1);
+  return withSeedFallback(
+    async () => {
+      const rows = await db
+        .select({
+          recipe: recipesTable,
+          profile: profiles,
+          coffee: coffeeBeans
+        })
+        .from(recipesTable)
+        .innerJoin(profiles, eq(recipesTable.ownerId, profiles.userId))
+        .leftJoin(coffeeBeans, eq(recipesTable.coffeeId, coffeeBeans.id))
+        .where(
+          and(
+            eq(profiles.handle, handle),
+            eq(recipesTable.slug, slug),
+            eq(recipesTable.visibility, "public")
+          )
+        )
+        .limit(1);
 
-    const row = rows[0];
-    if (!row) {
-      return shouldUseDemoData() ? seedRecipes.find((recipe) => recipe.author.handle === handle && recipe.slug === slug) ?? null : null;
-    }
+      const row = rows[0];
+      if (!row) {
+        return shouldUseDemoData()
+          ? (seedRecipes.find(
+              (recipe) => recipe.author.handle === handle && recipe.slug === slug
+            ) ?? null)
+          : null;
+      }
 
-    const steps = await getStepsForRecipes([row.recipe.id]);
-    const gear = await getGearFromDb();
-    return mapRecipe(row.recipe, row.profile, row.coffee ?? seedCoffees[0], steps.get(row.recipe.id) ?? [], gear);
-  }, seedRecipes.find((recipe) => recipe.author.handle === handle && recipe.slug === slug) ?? null);
+      const steps = await getStepsForRecipes([row.recipe.id]);
+      const gear = await getGearFromDb();
+      return mapRecipe(
+        row.recipe,
+        row.profile,
+        row.coffee ?? seedCoffees[0],
+        steps.get(row.recipe.id) ?? [],
+        gear
+      );
+    },
+    seedRecipes.find((recipe) => recipe.author.handle === handle && recipe.slug === slug) ?? null
+  );
 }
 
 export async function getSavedRecipesFromDb(): Promise<Recipe[]> {
@@ -220,18 +260,25 @@ export async function getCoffeesFromDb(filters?: { ownerId?: string }): Promise<
       where: filters?.ownerId ? eq(coffeeBeans.ownerId, filters.ownerId) : undefined,
       orderBy: desc(coffeeBeans.createdAt)
     });
-    return rows.length > 0 ? rows.map(mapCoffee) : !filters?.ownerId && shouldUseDemoData() ? seedCoffees : [];
+    return rows.length > 0
+      ? rows.map(mapCoffee)
+      : !filters?.ownerId && shouldUseDemoData()
+        ? seedCoffees
+        : [];
   }, seedCoffees);
 }
 
 export async function getCoffeeByIdFromDb(id: string): Promise<CoffeeBean | null> {
-  return withSeedFallback(async () => {
-    const row = await db.query.coffeeBeans.findFirst({
-      where: eq(coffeeBeans.id, id)
-    });
+  return withSeedFallback(
+    async () => {
+      const row = await db.query.coffeeBeans.findFirst({
+        where: eq(coffeeBeans.id, id)
+      });
 
-    return row ? mapCoffee(row) : null;
-  }, seedCoffees.find((coffee) => coffee.id === id) ?? null);
+      return row ? mapCoffee(row) : null;
+    },
+    seedCoffees.find((coffee) => coffee.id === id) ?? null
+  );
 }
 
 export async function getGearFromDb(filters?: { ownerId?: string }): Promise<GearItem[]> {
@@ -240,18 +287,130 @@ export async function getGearFromDb(filters?: { ownerId?: string }): Promise<Gea
       where: filters?.ownerId ? eq(gearItems.ownerId, filters.ownerId) : undefined,
       orderBy: desc(gearItems.createdAt)
     });
-    return rows.length > 0 ? rows.map(mapGear) : !filters?.ownerId && shouldUseDemoData() ? seedGear : [];
+    return rows.length > 0
+      ? rows.map(mapGear)
+      : !filters?.ownerId && shouldUseDemoData()
+        ? seedGear
+        : [];
   }, seedGear);
 }
 
 export async function getGearItemByIdFromDb(id: string): Promise<GearItem | null> {
+  return withSeedFallback(
+    async () => {
+      const row = await db.query.gearItems.findFirst({
+        where: eq(gearItems.id, id)
+      });
+
+      return row ? mapGear(row) : null;
+    },
+    seedGear.find((item) => item.id === id) ?? null
+  );
+}
+
+export async function getGrinderCatalogFromDb(filters?: {
+  query?: string;
+  status?: GrinderCatalogStatus | "all";
+}): Promise<GrinderCatalogItem[]> {
   return withSeedFallback(async () => {
-    const row = await db.query.gearItems.findFirst({
-      where: eq(gearItems.id, id)
+    const where = and(
+      filters?.status && filters.status !== "all"
+        ? eq(grinderCatalogItems.status, filters.status)
+        : undefined,
+      filters?.query
+        ? or(
+            ilike(grinderCatalogItems.name, `%${filters.query}%`),
+            ilike(grinderCatalogItems.brand, `%${filters.query}%`),
+            ilike(grinderCatalogItems.model, `%${filters.query}%`)
+          )
+        : undefined
+    );
+
+    const rows = await db.query.grinderCatalogItems.findMany({
+      where,
+      orderBy: [asc(grinderCatalogItems.brand), asc(grinderCatalogItems.model)]
     });
 
-    return row ? mapGear(row) : null;
-  }, seedGear.find((item) => item.id === id) ?? null);
+    if (
+      rows.length === 0 &&
+      !filters?.query &&
+      (!filters?.status || filters.status === "approved")
+    ) {
+      return seedGrinderCatalog;
+    }
+
+    return rows.map(mapGrinderCatalogItem);
+  }, filterSeedGrinderCatalog(filters));
+}
+
+export async function getGrinderCatalogItemByIdFromDb(
+  id: string
+): Promise<GrinderCatalogItem | null> {
+  return withSeedFallback(
+    async () => {
+      const row = await db.query.grinderCatalogItems.findFirst({
+        where: eq(grinderCatalogItems.id, id)
+      });
+
+      return row
+        ? mapGrinderCatalogItem(row)
+        : (seedGrinderCatalog.find((item) => item.id === id) ?? null);
+    },
+    seedGrinderCatalog.find((item) => item.id === id) ?? null
+  );
+}
+
+export async function getDripperCatalogFromDb(filters?: {
+  query?: string;
+  status?: DripperCatalogStatus | "all";
+}): Promise<DripperCatalogItem[]> {
+  return withSeedFallback(async () => {
+    const where = and(
+      filters?.status && filters.status !== "all"
+        ? eq(dripperCatalogItems.status, filters.status)
+        : undefined,
+      filters?.query
+        ? or(
+            ilike(dripperCatalogItems.name, `%${filters.query}%`),
+            ilike(dripperCatalogItems.brand, `%${filters.query}%`),
+            ilike(dripperCatalogItems.model, `%${filters.query}%`),
+            ilike(dripperCatalogItems.compatibleFilters, `%${filters.query}%`)
+          )
+        : undefined
+    );
+
+    const rows = await db.query.dripperCatalogItems.findMany({
+      where,
+      orderBy: [asc(dripperCatalogItems.brand), asc(dripperCatalogItems.model)]
+    });
+
+    if (
+      rows.length === 0 &&
+      !filters?.query &&
+      (!filters?.status || filters.status === "approved")
+    ) {
+      return seedDripperCatalog;
+    }
+
+    return rows.map(mapDripperCatalogItem);
+  }, filterSeedDripperCatalog(filters));
+}
+
+export async function getDripperCatalogItemByIdFromDb(
+  id: string
+): Promise<DripperCatalogItem | null> {
+  return withSeedFallback(
+    async () => {
+      const row = await db.query.dripperCatalogItems.findFirst({
+        where: eq(dripperCatalogItems.id, id)
+      });
+
+      return row
+        ? mapDripperCatalogItem(row)
+        : (seedDripperCatalog.find((item) => item.id === id) ?? null);
+    },
+    seedDripperCatalog.find((item) => item.id === id) ?? null
+  );
 }
 
 export async function getCollectionsFromDb(): Promise<Collection[]> {
@@ -287,7 +446,10 @@ export async function getCollectionByIdFromDb(id: string): Promise<Collection | 
   }, null);
 }
 
-export async function getPublicCollectionFromDb(handle: string, slug: string): Promise<Collection | null> {
+export async function getPublicCollectionFromDb(
+  handle: string,
+  slug: string
+): Promise<Collection | null> {
   return withSeedFallback(async () => {
     const row = await db
       .select({
@@ -296,7 +458,13 @@ export async function getPublicCollectionFromDb(handle: string, slug: string): P
       })
       .from(collectionsTable)
       .innerJoin(profiles, eq(collectionsTable.ownerId, profiles.userId))
-      .where(and(eq(profiles.handle, handle), eq(collectionsTable.slug, slug), eq(collectionsTable.visibility, "public")))
+      .where(
+        and(
+          eq(profiles.handle, handle),
+          eq(collectionsTable.slug, slug),
+          eq(collectionsTable.visibility, "public")
+        )
+      )
       .limit(1);
 
     return row[0] ? mapCollectionWithItems(row[0].collection, row[0].owner) : null;
@@ -313,8 +481,17 @@ export async function getClubsFromDb(): Promise<Club[]> {
       return shouldUseDemoData() ? seedClubs : [];
     }
 
-    const [members, challengesRows] = await Promise.all([db.query.clubMembers.findMany(), db.query.challenges.findMany()]);
-    return rows.map((row) => mapClub(row, members.filter((member) => member.clubId === row.id).length, challengesRows.find((challenge) => challenge.clubId === row.id)?.id));
+    const [members, challengesRows] = await Promise.all([
+      db.query.clubMembers.findMany(),
+      db.query.challenges.findMany()
+    ]);
+    return rows.map((row) =>
+      mapClub(
+        row,
+        members.filter((member) => member.clubId === row.id).length,
+        challengesRows.find((challenge) => challenge.clubId === row.id)?.id
+      )
+    );
   }, seedClubs);
 }
 
@@ -354,7 +531,9 @@ export async function getChallengesFromDb(): Promise<Challenge[]> {
     }
 
     const clubsRows = await db.query.clubs.findMany();
-    return rows.map((row) => mapChallenge(row, clubsRows.find((club) => club.id === row.clubId)?.slug));
+    return rows.map((row) =>
+      mapChallenge(row, clubsRows.find((club) => club.id === row.clubId)?.slug)
+    );
   }, seedChallenges);
 }
 
@@ -363,7 +542,11 @@ export async function getChallengeByIdFromDb(id: string): Promise<Challenge | nu
   return challenges.find((challenge) => challenge.id === id) ?? null;
 }
 
-export async function enterChallengeInDb(input: { challengeId: string; brewLogId?: string; notes?: string }) {
+export async function enterChallengeInDb(input: {
+  challengeId: string;
+  brewLogId?: string;
+  notes?: string;
+}) {
   const viewerId = await ensureCurrentIdentity();
   await db
     .insert(challengeEntries)
@@ -379,7 +562,10 @@ export async function enterChallengeInDb(input: { challengeId: string; brewLogId
     where: eq(challengeEntries.challengeId, input.challengeId)
   });
 
-  await db.update(challengesTable).set({ entryCount: entries.length }).where(eq(challengesTable.id, input.challengeId));
+  await db
+    .update(challengesTable)
+    .set({ entryCount: entries.length })
+    .where(eq(challengesTable.id, input.challengeId));
 
   await createNotificationInDb({
     userId: viewerId,
@@ -416,60 +602,76 @@ export async function getBrewLogsFromDb(filters?: { ownerId?: string }): Promise
 
     return rows.map((row) => {
       const coffee = row.coffee ?? seedCoffees[0];
-      const recipe = row.recipe ? mapRecipe(row.recipe, row.profile, coffee, steps.get(row.recipe.id) ?? [], gear) : undefined;
+      const recipe = row.recipe
+        ? mapRecipe(row.recipe, row.profile, coffee, steps.get(row.recipe.id) ?? [], gear)
+        : undefined;
       return mapBrewLog(row.brewLog, row.profile, recipe, coffee);
     });
   }, seedBrewLogs);
 }
 
 export async function getBrewLogByIdFromDb(id: string): Promise<BrewLog | null> {
-  return withSeedFallback(async () => {
-    const row = await db
-      .select({
-        brewLog: brewLogsTable,
-        recipe: recipesTable,
-        profile: profiles,
-        coffee: coffeeBeans
-      })
-      .from(brewLogsTable)
-      .leftJoin(recipesTable, eq(brewLogsTable.recipeId, recipesTable.id))
-      .innerJoin(profiles, eq(brewLogsTable.ownerId, profiles.userId))
-      .leftJoin(coffeeBeans, eq(brewLogsTable.coffeeId, coffeeBeans.id))
-      .where(eq(brewLogsTable.id, id))
-      .limit(1);
+  return withSeedFallback(
+    async () => {
+      const row = await db
+        .select({
+          brewLog: brewLogsTable,
+          recipe: recipesTable,
+          profile: profiles,
+          coffee: coffeeBeans
+        })
+        .from(brewLogsTable)
+        .leftJoin(recipesTable, eq(brewLogsTable.recipeId, recipesTable.id))
+        .innerJoin(profiles, eq(brewLogsTable.ownerId, profiles.userId))
+        .leftJoin(coffeeBeans, eq(brewLogsTable.coffeeId, coffeeBeans.id))
+        .where(eq(brewLogsTable.id, id))
+        .limit(1);
 
-    if (!row[0]) {
-      return null;
-    }
+      if (!row[0]) {
+        return null;
+      }
 
-    const steps = row[0].recipe ? await getStepsForRecipes([row[0].recipe.id]) : new Map<string, RecipeStep[]>();
-    const gear = await getGearFromDb();
-    const coffee = row[0].coffee ?? seedCoffees[0];
-    const recipe = row[0].recipe ? mapRecipe(row[0].recipe, row[0].profile, coffee, steps.get(row[0].recipe.id) ?? [], gear) : undefined;
-    return mapBrewLog(row[0].brewLog, row[0].profile, recipe, coffee);
-  }, seedBrewLogs.find((brewLog) => brewLog.id === id) ?? null);
+      const steps = row[0].recipe
+        ? await getStepsForRecipes([row[0].recipe.id])
+        : new Map<string, RecipeStep[]>();
+      const gear = await getGearFromDb();
+      const coffee = row[0].coffee ?? seedCoffees[0];
+      const recipe = row[0].recipe
+        ? mapRecipe(row[0].recipe, row[0].profile, coffee, steps.get(row[0].recipe.id) ?? [], gear)
+        : undefined;
+      return mapBrewLog(row[0].brewLog, row[0].profile, recipe, coffee);
+    },
+    seedBrewLogs.find((brewLog) => brewLog.id === id) ?? null
+  );
 }
 
 export async function getFeedFromDb(): Promise<FeedItem[]> {
-  const [recipes, brewLogs] = await Promise.all([getRecipesFromDb({ visibility: "public" }), getBrewLogsFromDb()]);
+  const [recipes, brewLogs] = await Promise.all([
+    getRecipesFromDb({ visibility: "public" }),
+    getBrewLogsFromDb()
+  ]);
 
   return [
-    ...recipes.map((recipe): FeedItem => ({
-      id: `feed_recipe_${recipe.id}`,
-      type: "recipe",
-      recipe,
-      author: recipe.author,
-      createdAt: recipe.updatedAt
-    })),
+    ...recipes.map(
+      (recipe): FeedItem => ({
+        id: `feed_recipe_${recipe.id}`,
+        type: "recipe",
+        recipe,
+        author: recipe.author,
+        createdAt: recipe.updatedAt
+      })
+    ),
     ...brewLogs
       .filter((brewLog) => brewLog.visibility === "public")
-      .map((brewLog): FeedItem => ({
-        id: `feed_brew_${brewLog.id}`,
-        type: "brew_log",
-        brewLog,
-        author: brewLog.author,
-        createdAt: brewLog.brewedAt
-      }))
+      .map(
+        (brewLog): FeedItem => ({
+          id: `feed_brew_${brewLog.id}`,
+          type: "brew_log",
+          brewLog,
+          author: brewLog.author,
+          createdAt: brewLog.brewedAt
+        })
+      )
   ];
 }
 
@@ -496,32 +698,41 @@ export async function getSocialCountsForTargetFromDb(input: {
   targetType: SocialTargetType;
   targetId: string;
 }): Promise<SocialCounts> {
-  return withSeedFallback(async () => {
-    const [likesRows, savesRows, commentsRows] = await Promise.all([
-      db
-        .select({ id: reactions.id })
-        .from(reactions)
-        .where(and(eq(reactions.targetType, input.targetType), eq(reactions.targetId, input.targetId))),
-      db
-        .select({ id: saves.id })
-        .from(saves)
-        .where(and(eq(saves.targetType, input.targetType), eq(saves.targetId, input.targetId))),
-      db
-        .select({ id: comments.id })
-        .from(comments)
-        .where(and(eq(comments.targetType, input.targetType), eq(comments.targetId, input.targetId)))
-    ]);
+  return withSeedFallback(
+    async () => {
+      const [likesRows, savesRows, commentsRows] = await Promise.all([
+        db
+          .select({ id: reactions.id })
+          .from(reactions)
+          .where(
+            and(eq(reactions.targetType, input.targetType), eq(reactions.targetId, input.targetId))
+          ),
+        db
+          .select({ id: saves.id })
+          .from(saves)
+          .where(and(eq(saves.targetType, input.targetType), eq(saves.targetId, input.targetId))),
+        db
+          .select({ id: comments.id })
+          .from(comments)
+          .where(
+            and(eq(comments.targetType, input.targetType), eq(comments.targetId, input.targetId))
+          )
+      ]);
 
-    return {
-      likes: likesRows.length,
-      saves: savesRows.length,
-      comments: commentsRows.length,
-      followers: 0
-    };
-  }, { likes: 0, saves: 0, comments: 0, followers: 0 });
+      return {
+        likes: likesRows.length,
+        saves: savesRows.length,
+        comments: commentsRows.length,
+        followers: 0
+      };
+    },
+    { likes: 0, saves: 0, comments: 0, followers: 0 }
+  );
 }
 
-export async function getContentReportsFromDb(status?: ContentReport["status"] | "all"): Promise<ContentReport[]> {
+export async function getContentReportsFromDb(
+  status?: ContentReport["status"] | "all"
+): Promise<ContentReport[]> {
   return withSeedFallback(async () => {
     const rows = await db
       .select({
@@ -624,7 +835,9 @@ export async function hideReportedContentInDb(reportId: string) {
   }
 
   if (report.targetType === "comment") {
-    await db.delete(comments).where(or(eq(comments.id, report.targetId), eq(comments.parentId, report.targetId)));
+    await db
+      .delete(comments)
+      .where(or(eq(comments.id, report.targetId), eq(comments.parentId, report.targetId)));
   }
 
   await db
@@ -653,6 +866,7 @@ export async function createRecipeInDb(input: {
   waterGrams: number;
   temperatureCelsius: number;
   grindLabel: string;
+  grindSetting?: string;
   steps: Array<{
     label: string;
     startsAtSeconds: number;
@@ -683,7 +897,7 @@ export async function createRecipeInDb(input: {
     ratio: calculateRatio(input.doseGrams, input.waterGrams),
     temperatureCelsius: input.temperatureCelsius,
     grindLabel: input.grindLabel,
-    grindSetting: "",
+    grindSetting: input.grindSetting ?? "",
     totalTimeSeconds: Math.max(...input.steps.map((step) => step.startsAtSeconds), 0) + 30,
     flavorNotes: [],
     tasteProfile: { sweetness: 60, acidity: 55, body: 55, balance: 60, finish: 58 },
@@ -697,7 +911,8 @@ export async function createRecipeInDb(input: {
       position: index,
       label: step.label,
       startsAtSeconds: step.startsAtSeconds,
-      endsAtSeconds: index === input.steps.length - 1 ? undefined : input.steps[index + 1].startsAtSeconds,
+      endsAtSeconds:
+        index === input.steps.length - 1 ? undefined : input.steps[index + 1].startsAtSeconds,
       pourGrams: step.pourGrams,
       cumulativeWaterGrams: step.cumulativeWaterGrams,
       instruction: step.instruction,
@@ -721,6 +936,7 @@ export async function updateRecipeInDb(input: {
   waterGrams: number;
   temperatureCelsius: number;
   grindLabel: string;
+  grindSetting?: string;
   steps: Array<{
     label: string;
     startsAtSeconds: number;
@@ -748,6 +964,7 @@ export async function updateRecipeInDb(input: {
       ratio: calculateRatio(input.doseGrams, input.waterGrams),
       temperatureCelsius: input.temperatureCelsius,
       grindLabel: input.grindLabel,
+      grindSetting: input.grindSetting ?? "",
       totalTimeSeconds,
       updatedAt: new Date()
     })
@@ -766,7 +983,8 @@ export async function updateRecipeInDb(input: {
       position: index,
       label: step.label,
       startsAtSeconds: step.startsAtSeconds,
-      endsAtSeconds: index === input.steps.length - 1 ? undefined : input.steps[index + 1].startsAtSeconds,
+      endsAtSeconds:
+        index === input.steps.length - 1 ? undefined : input.steps[index + 1].startsAtSeconds,
       pourGrams: step.pourGrams,
       cumulativeWaterGrams: step.cumulativeWaterGrams,
       instruction: step.instruction,
@@ -848,7 +1066,14 @@ export async function createRecipeRemixInDb(recipeId: string) {
     .update(recipesTable)
     .set({
       stats: {
-        ...(source.stats ?? { likes: 0, saves: 0, brews: 0, averageRating: 0, remixes: 0, comments: 0 }),
+        ...(source.stats ?? {
+          likes: 0,
+          saves: 0,
+          brews: 0,
+          averageRating: 0,
+          remixes: 0,
+          comments: 0
+        }),
         remixes: (source.stats?.remixes ?? 0) + 1
       },
       updatedAt: new Date()
@@ -869,7 +1094,9 @@ export async function createRecipeRemixInDb(recipeId: string) {
 
 export async function deleteRecipeInDb(id: string) {
   const viewerId = await ensureCurrentIdentity();
-  await db.delete(recipesTable).where(and(eq(recipesTable.id, id), eq(recipesTable.ownerId, viewerId)));
+  await db
+    .delete(recipesTable)
+    .where(and(eq(recipesTable.id, id), eq(recipesTable.ownerId, viewerId)));
 }
 
 export async function createBrewLogInDb(input: {
@@ -890,7 +1117,9 @@ export async function createBrewLogInDb(input: {
   const viewerId = await ensureCurrentIdentity();
   const actor = await getNotificationActor(viewerId);
   const recipe = input.recipeId ? await getRecipeByIdFromDb(input.recipeId) : null;
-  const coffee = input.coffeeId ? await getCoffeeByIdFromDb(input.coffeeId) : recipe?.coffee ?? null;
+  const coffee = input.coffeeId
+    ? await getCoffeeByIdFromDb(input.coffeeId)
+    : (recipe?.coffee ?? null);
   const id = crypto.randomUUID();
 
   if (!recipe && !coffee) {
@@ -949,7 +1178,9 @@ export async function updateBrewLogInDb(input: {
 }) {
   const viewerId = await ensureCurrentIdentity();
   const recipe = input.recipeId ? await getRecipeByIdFromDb(input.recipeId) : null;
-  const coffee = input.coffeeId ? await getCoffeeByIdFromDb(input.coffeeId) : recipe?.coffee ?? null;
+  const coffee = input.coffeeId
+    ? await getCoffeeByIdFromDb(input.coffeeId)
+    : (recipe?.coffee ?? null);
 
   if (!recipe && !coffee) {
     throw new Error("Choose a recipe or coffee before saving a brew log");
@@ -985,7 +1216,9 @@ export async function updateBrewLogInDb(input: {
 
 export async function deleteBrewLogInDb(id: string) {
   const viewerId = await ensureCurrentIdentity();
-  await db.delete(brewLogsTable).where(and(eq(brewLogsTable.id, id), eq(brewLogsTable.ownerId, viewerId)));
+  await db
+    .delete(brewLogsTable)
+    .where(and(eq(brewLogsTable.id, id), eq(brewLogsTable.ownerId, viewerId)));
 }
 
 export async function updateProfileInDb(input: {
@@ -1019,7 +1252,10 @@ export async function updateProfileInDb(input: {
       coverUrl: input.coverUrl || existingProfile?.coverUrl || seedCurrentUser.coverUrl,
       coverAssetId: input.coverAssetId || existingProfile?.coverAssetId || null,
       defaultVisibility: input.defaultVisibility ?? existingProfile?.defaultVisibility ?? "private",
-      favoriteMethods: input.favoriteMethods ?? (existingProfile?.favoriteMethods as BrewMethod[] | undefined) ?? [],
+      favoriteMethods:
+        input.favoriteMethods ??
+        (existingProfile?.favoriteMethods as BrewMethod[] | undefined) ??
+        [],
       updatedAt: new Date()
     })
     .where(eq(profiles.userId, viewerId));
@@ -1031,7 +1267,10 @@ export async function isHandleAvailableInDb(handle: string, ownerUserId = DEV_US
   const viewerId = await ensureCurrentIdentity();
   const normalizedHandle = handle.toLowerCase();
   const existing = await db.query.profiles.findFirst({
-    where: and(eq(profiles.handle, normalizedHandle), ne(profiles.userId, ownerUserId === DEV_USER_ID ? viewerId : ownerUserId))
+    where: and(
+      eq(profiles.handle, normalizedHandle),
+      ne(profiles.userId, ownerUserId === DEV_USER_ID ? viewerId : ownerUserId)
+    )
   });
 
   return !existing;
@@ -1112,7 +1351,9 @@ export async function updateCoffeeInDb(input: {
 
 export async function deleteCoffeeInDb(id: string) {
   const viewerId = await ensureCurrentIdentity();
-  await db.delete(coffeeBeans).where(and(eq(coffeeBeans.id, id), eq(coffeeBeans.ownerId, viewerId)));
+  await db
+    .delete(coffeeBeans)
+    .where(and(eq(coffeeBeans.id, id), eq(coffeeBeans.ownerId, viewerId)));
 }
 
 export async function createGearItemInDb(input: {
@@ -1136,7 +1377,8 @@ export async function createGearItemInDb(input: {
   const viewerId = await ensureCurrentIdentity();
   const id = crypto.randomUUID();
   const detailNotes = buildGearNotes(input);
-  const fallbackImage = seedGear.find((item) => item.type === input.type)?.imageUrl ?? seedGear[0].imageUrl;
+  const fallbackImage =
+    seedGear.find((item) => item.type === input.type)?.imageUrl ?? seedGear[0].imageUrl;
 
   await db.insert(gearItems).values({
     id,
@@ -1178,7 +1420,8 @@ export async function updateGearItemInDb(input: {
     where: eq(gearItems.id, input.id)
   });
   const detailNotes = buildGearNotes(input);
-  const fallbackImage = seedGear.find((item) => item.type === input.type)?.imageUrl ?? seedGear[0].imageUrl;
+  const fallbackImage =
+    seedGear.find((item) => item.type === input.type)?.imageUrl ?? seedGear[0].imageUrl;
 
   const [updated] = await db
     .update(gearItems)
@@ -1204,6 +1447,135 @@ export async function updateGearItemInDb(input: {
 
 export const createGrinderInDb = createGearItemInDb;
 export const updateGrinderInDb = updateGearItemInDb;
+
+export async function createGearItemFromGrinderCatalogInDb(input: {
+  catalogItemId: string;
+  defaultForMethod?: BrewMethod;
+  visibility: Visibility;
+}) {
+  const catalogItem = await getGrinderCatalogItemByIdFromDb(input.catalogItemId);
+
+  if (!catalogItem || catalogItem.status !== "approved") {
+    throw new Error("Catalog grinder not found");
+  }
+
+  return createGearItemInDb({
+    type: "grinder",
+    name: catalogItem.name,
+    brand: catalogItem.brand,
+    model: catalogItem.model,
+    grinderDrive: catalogItem.grinderDrive,
+    burrType: catalogItem.burrType,
+    filterRange: catalogItem.filterRange,
+    notes: catalogItem.notes,
+    imageUrl: catalogItem.imageUrl,
+    defaultForMethod: input.defaultForMethod,
+    visibility: input.visibility
+  });
+}
+
+export async function createGrinderCatalogItemInDb(input: {
+  name: string;
+  brand: string;
+  model: string;
+  grinderDrive: "manual" | "electric";
+  burrType?: string;
+  filterRange?: string;
+  notes?: string;
+  imageUrl?: string;
+}) {
+  const viewer = await getViewerFromDb();
+  const id = crypto.randomUUID();
+  const status: GrinderCatalogStatus = "approved";
+
+  const [created] = await db
+    .insert(grinderCatalogItems)
+    .values({
+      id,
+      submittedById: viewer.id,
+      name: input.name,
+      brand: input.brand,
+      model: input.model,
+      grinderDrive: input.grinderDrive,
+      burrType: input.burrType ?? "",
+      filterRange: input.filterRange ?? "",
+      notes: input.notes ?? "",
+      imageUrl: input.imageUrl ?? "",
+      status
+    })
+    .onConflictDoNothing({
+      target: [grinderCatalogItems.brand, grinderCatalogItems.model]
+    })
+    .returning({ id: grinderCatalogItems.id });
+
+  return { id: created?.id ?? id, status };
+}
+
+export async function createGearItemFromDripperCatalogInDb(input: {
+  catalogItemId: string;
+  defaultForMethod?: BrewMethod;
+  visibility: Visibility;
+}) {
+  const catalogItem = await getDripperCatalogItemByIdFromDb(input.catalogItemId);
+
+  if (!catalogItem || catalogItem.status !== "approved") {
+    throw new Error("Catalog dripper not found");
+  }
+
+  return createGearItemInDb({
+    type: "dripper",
+    name: catalogItem.name,
+    brand: catalogItem.brand,
+    model: catalogItem.model,
+    material: catalogItem.material,
+    size: catalogItem.size,
+    brewSpeed: catalogItem.brewSpeed,
+    compatibleFilters: catalogItem.compatibleFilters,
+    notes: catalogItem.notes,
+    imageUrl: catalogItem.imageUrl,
+    defaultForMethod: input.defaultForMethod,
+    visibility: input.visibility
+  });
+}
+
+export async function createDripperCatalogItemInDb(input: {
+  name: string;
+  brand: string;
+  model: string;
+  material?: string;
+  size?: string;
+  brewSpeed?: string;
+  compatibleFilters?: string;
+  notes?: string;
+  imageUrl?: string;
+}) {
+  const viewer = await getViewerFromDb();
+  const id = crypto.randomUUID();
+  const status: DripperCatalogStatus = "approved";
+
+  const [created] = await db
+    .insert(dripperCatalogItems)
+    .values({
+      id,
+      submittedById: viewer.id,
+      name: input.name,
+      brand: input.brand,
+      model: input.model,
+      material: input.material ?? "",
+      size: input.size ?? "",
+      brewSpeed: input.brewSpeed ?? "",
+      compatibleFilters: input.compatibleFilters ?? "",
+      notes: input.notes ?? "",
+      imageUrl: input.imageUrl ?? "",
+      status
+    })
+    .onConflictDoNothing({
+      target: [dripperCatalogItems.brand, dripperCatalogItems.model]
+    })
+    .returning({ id: dripperCatalogItems.id });
+
+  return { id: created?.id ?? id, status };
+}
 
 export async function deleteGearItemInDb(id: string) {
   const viewerId = await ensureCurrentIdentity();
@@ -1266,10 +1638,7 @@ export async function addCollectionItemInDb(input: {
     .where(eq(collectionsTable.id, input.collectionId));
 }
 
-export async function removeCollectionItemInDb(input: {
-  collectionId: string;
-  itemId: string;
-}) {
+export async function removeCollectionItemInDb(input: { collectionId: string; itemId: string }) {
   const viewerId = await ensureCurrentIdentity();
   const collection = await db.query.collections.findFirst({
     where: and(eq(collectionsTable.id, input.collectionId), eq(collectionsTable.ownerId, viewerId))
@@ -1279,17 +1648,21 @@ export async function removeCollectionItemInDb(input: {
     throw new Error("Collection not found");
   }
 
-  await db.delete(collectionItems).where(and(eq(collectionItems.id, input.itemId), eq(collectionItems.collectionId, input.collectionId)));
+  await db
+    .delete(collectionItems)
+    .where(
+      and(
+        eq(collectionItems.id, input.itemId),
+        eq(collectionItems.collectionId, input.collectionId)
+      )
+    );
   await db
     .update(collectionsTable)
     .set({ updatedAt: new Date() })
     .where(eq(collectionsTable.id, input.collectionId));
 }
 
-export async function addReactionInDb(input: {
-  targetType: SocialTargetType;
-  targetId: string;
-}) {
+export async function addReactionInDb(input: { targetType: SocialTargetType; targetId: string }) {
   const viewerId = await ensureCurrentIdentity();
   const actor = await getNotificationActor(viewerId);
 
@@ -1320,10 +1693,7 @@ export async function addReactionInDb(input: {
   }
 }
 
-export async function saveTargetInDb(input: {
-  targetType: SocialTargetType;
-  targetId: string;
-}) {
+export async function saveTargetInDb(input: { targetType: SocialTargetType; targetId: string }) {
   const viewerId = await ensureCurrentIdentity();
   const actor = await getNotificationActor(viewerId);
 
@@ -1432,7 +1802,10 @@ export async function getConversationsFromDb(): Promise<Conversation[]> {
     const rows = await db
       .select({ conversation: directConversations })
       .from(directConversations)
-      .innerJoin(directConversationParticipants, eq(directConversationParticipants.conversationId, directConversations.id))
+      .innerJoin(
+        directConversationParticipants,
+        eq(directConversationParticipants.conversationId, directConversations.id)
+      )
       .where(eq(directConversationParticipants.userId, viewerId))
       .orderBy(desc(directConversations.updatedAt));
 
@@ -1448,7 +1821,9 @@ export async function getConversationsFromDb(): Promise<Conversation[]> {
 
     return rows.map((row, index) => {
       const fallback = seedConversations[index] ?? seedConversations[0];
-      const lastMessage = messages.find((message) => message.conversationId === row.conversation.id);
+      const lastMessage = messages.find(
+        (message) => message.conversationId === row.conversation.id
+      );
       return {
         ...fallback,
         id: row.conversation.id,
@@ -1506,7 +1881,11 @@ export async function getNotificationsFromDb(): Promise<Notification[]> {
       .where(eq(notificationsTable.userId, viewerId))
       .orderBy(desc(notificationsTable.createdAt));
 
-    return rows.length > 0 ? rows.map((row) => mapNotification(row.notification, row.actor ?? undefined)) : shouldUseDemoData() ? seedNotifications : [];
+    return rows.length > 0
+      ? rows.map((row) => mapNotification(row.notification, row.actor ?? undefined))
+      : shouldUseDemoData()
+        ? seedNotifications
+        : [];
   }, seedNotifications);
 }
 
@@ -1531,7 +1910,10 @@ export async function createNotificationInDb(input: {
 
 export async function markNotificationsReadInDb() {
   const viewerId = await ensureCurrentIdentity();
-  await db.update(notificationsTable).set({ readAt: new Date() }).where(eq(notificationsTable.userId, viewerId));
+  await db
+    .update(notificationsTable)
+    .set({ readAt: new Date() })
+    .where(eq(notificationsTable.userId, viewerId));
 }
 
 async function getNotificationTargetContext(input: {
@@ -1551,7 +1933,9 @@ async function getNotificationTargetContext(input: {
       .where(eq(recipesTable.id, input.targetId))
       .limit(1);
 
-    return row ? { ownerId: row.ownerId, title: row.title, href: `/r/${row.handle}/${row.slug}` } : null;
+    return row
+      ? { ownerId: row.ownerId, title: row.title, href: `/r/${row.handle}/${row.slug}` }
+      : null;
   }
 
   if (input.targetType === "brew_log") {
@@ -1564,7 +1948,9 @@ async function getNotificationTargetContext(input: {
       .where(eq(brewLogsTable.id, input.targetId))
       .limit(1);
 
-    return row ? { ownerId: row.ownerId, title: row.title, href: `/brews/${input.targetId}` } : null;
+    return row
+      ? { ownerId: row.ownerId, title: row.title, href: `/brews/${input.targetId}` }
+      : null;
   }
 
   if (input.targetType === "coffee") {
@@ -1595,9 +1981,7 @@ async function getNotificationTargetContext(input: {
       .where(eq(gearItems.id, input.targetId))
       .limit(1);
 
-    return row?.ownerId
-      ? { ownerId: row.ownerId, title: row.name, href: `/gear/${row.id}` }
-      : null;
+    return row?.ownerId ? { ownerId: row.ownerId, title: row.name, href: `/gear/${row.id}` } : null;
   }
 
   if (input.targetType === "collection") {
@@ -1613,7 +1997,9 @@ async function getNotificationTargetContext(input: {
       .where(eq(collectionsTable.id, input.targetId))
       .limit(1);
 
-    return row ? { ownerId: row.ownerId, title: row.title, href: `/u/${row.handle}/collections/${row.slug}` } : null;
+    return row
+      ? { ownerId: row.ownerId, title: row.title, href: `/u/${row.handle}/collections/${row.slug}` }
+      : null;
   }
 
   const comment = await db.query.comments.findFirst({
@@ -1719,6 +2105,43 @@ export async function ensureDevIdentity() {
         imageUrl: item.imageUrl,
         defaultForMethod: item.defaultForMethod,
         visibility: item.visibility
+      }))
+    )
+    .onConflictDoNothing();
+
+  await db
+    .insert(grinderCatalogItems)
+    .values(
+      seedGrinderCatalog.map((item) => ({
+        id: item.id,
+        name: item.name,
+        brand: item.brand,
+        model: item.model,
+        grinderDrive: item.grinderDrive,
+        burrType: item.burrType,
+        filterRange: item.filterRange,
+        notes: item.notes,
+        imageUrl: item.imageUrl,
+        status: item.status
+      }))
+    )
+    .onConflictDoNothing();
+
+  await db
+    .insert(dripperCatalogItems)
+    .values(
+      seedDripperCatalog.map((item) => ({
+        id: item.id,
+        name: item.name,
+        brand: item.brand,
+        model: item.model,
+        material: item.material,
+        size: item.size,
+        brewSpeed: item.brewSpeed,
+        compatibleFilters: item.compatibleFilters,
+        notes: item.notes,
+        imageUrl: item.imageUrl,
+        status: item.status
       }))
     )
     .onConflictDoNothing();
@@ -1878,7 +2301,8 @@ async function getCurrentSessionUser(): Promise<CurrentSessionUser | null> {
 }
 
 async function buildAvailableHandle(sessionUser: CurrentSessionUser) {
-  const base = slugify(sessionUser.name || sessionUser.email.split("@")[0]).slice(0, 24) || "brewer";
+  const base =
+    slugify(sessionUser.name || sessionUser.email.split("@")[0]).slice(0, 24) || "brewer";
   const existing = await db.query.profiles.findFirst({
     where: eq(profiles.handle, base)
   });
@@ -1961,6 +2385,79 @@ function mapGear(row: DbGear): GearItem {
   };
 }
 
+function mapGrinderCatalogItem(row: DbGrinderCatalogItem): GrinderCatalogItem {
+  return {
+    id: row.id,
+    name: row.name,
+    brand: row.brand,
+    model: row.model,
+    grinderDrive: row.grinderDrive,
+    burrType: row.burrType,
+    filterRange: row.filterRange,
+    notes: row.notes,
+    imageUrl:
+      row.imageUrl ||
+      seedGear.find((item) => item.type === "grinder")?.imageUrl ||
+      seedGear[0].imageUrl,
+    status: row.status
+  };
+}
+
+function mapDripperCatalogItem(row: DbDripperCatalogItem): DripperCatalogItem {
+  return {
+    id: row.id,
+    name: row.name,
+    brand: row.brand,
+    model: row.model,
+    material: row.material,
+    size: row.size,
+    brewSpeed: row.brewSpeed,
+    compatibleFilters: row.compatibleFilters,
+    notes: row.notes,
+    imageUrl:
+      row.imageUrl ||
+      seedGear.find((item) => item.type === "dripper")?.imageUrl ||
+      seedGear[0].imageUrl,
+    status: row.status
+  };
+}
+
+function filterSeedGrinderCatalog(filters?: {
+  query?: string;
+  status?: GrinderCatalogStatus | "all";
+}) {
+  const query = filters?.query?.trim().toLowerCase();
+
+  return seedGrinderCatalog.filter((item) => {
+    const matchesStatus =
+      !filters?.status || filters.status === "all" ? true : item.status === filters.status;
+    const matchesQuery = query
+      ? [item.name, item.brand, item.model].some((value) => value.toLowerCase().includes(query))
+      : true;
+
+    return matchesStatus && matchesQuery;
+  });
+}
+
+function filterSeedDripperCatalog(filters?: {
+  query?: string;
+  status?: DripperCatalogStatus | "all";
+}) {
+  const query = filters?.query?.trim().toLowerCase();
+
+  return seedDripperCatalog.filter((item) => {
+    const matchesStatus =
+      !filters?.status || filters.status === "all" ? true : item.status === filters.status;
+    const matchesQuery = query
+      ? [item.name, item.brand, item.model, item.compatibleFilters].some((value) =>
+          value.toLowerCase().includes(query)
+        )
+      : true;
+
+    return matchesStatus && matchesQuery;
+  });
+}
+
 function mapContentReport(row: DbContentReport, reporter: DbProfile): ContentReport {
   return {
     id: row.id,
@@ -1998,7 +2495,11 @@ async function mapCollectionWithItems(row: DbCollection, owner: DbProfile): Prom
   };
 }
 
-function mapCollectionItem(item: DbCollectionItem, recipes: Recipe[], brewLogs: BrewLog[]): CollectionItem {
+function mapCollectionItem(
+  item: DbCollectionItem,
+  recipes: Recipe[],
+  brewLogs: BrewLog[]
+): CollectionItem {
   if (item.targetType === "brew_log") {
     const brewLog = brewLogs.find((candidate) => candidate.id === item.targetId);
     return {
@@ -2050,8 +2551,17 @@ function buildGearNotes(input: {
     .join("\n");
 }
 
-function mapRecipe(row: DbRecipe, profile: DbProfile, coffee: DbCoffee | CoffeeBean, steps: RecipeStep[], gear: GearItem[]): Recipe {
-  const mappedCoffee = "slug" in coffee && "imageUrl" in coffee ? (coffee as CoffeeBean) : mapCoffee(coffee as DbCoffee);
+function mapRecipe(
+  row: DbRecipe,
+  profile: DbProfile,
+  coffee: DbCoffee | CoffeeBean,
+  steps: RecipeStep[],
+  gear: GearItem[]
+): Recipe {
+  const mappedCoffee =
+    "slug" in coffee && "imageUrl" in coffee
+      ? (coffee as CoffeeBean)
+      : mapCoffee(coffee as DbCoffee);
 
   return {
     id: row.id,
@@ -2104,8 +2614,16 @@ function mapStep(row: DbRecipeStep): RecipeStep {
   };
 }
 
-function mapBrewLog(row: DbBrewLog, profile: DbProfile, recipe: Recipe | undefined, coffee: DbCoffee | CoffeeBean): BrewLog {
-  const mappedCoffee = "slug" in coffee && "imageUrl" in coffee ? (coffee as CoffeeBean) : mapCoffee(coffee as DbCoffee);
+function mapBrewLog(
+  row: DbBrewLog,
+  profile: DbProfile,
+  recipe: Recipe | undefined,
+  coffee: DbCoffee | CoffeeBean
+): BrewLog {
+  const mappedCoffee =
+    "slug" in coffee && "imageUrl" in coffee
+      ? (coffee as CoffeeBean)
+      : mapCoffee(coffee as DbCoffee);
 
   return {
     id: row.id,

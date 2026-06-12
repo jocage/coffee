@@ -1,4 +1,17 @@
-import type { BrewLog, Challenge, Club, CoffeeBean, Conversation, FeedItem, GearItem, Notification, Recipe, UserProfile } from "@/lib/domain";
+import type {
+  BrewLog,
+  Challenge,
+  Club,
+  CoffeeBean,
+  Conversation,
+  FeedItem,
+  GearItem,
+  DripperCatalogItem,
+  GrinderCatalogItem,
+  Notification,
+  Recipe,
+  UserProfile
+} from "@/lib/domain";
 import { images } from "@/lib/data/images";
 
 export const currentUser: UserProfile = {
@@ -107,6 +120,444 @@ export const gear: GearItem[] = [
     notes: "0.1g precision and flow timer.",
     imageUrl: images.darkPour,
     visibility: "private"
+  }
+];
+
+export const grinderCatalog: GrinderCatalogItem[] = [
+  {
+    id: "catalog_comandante_c40_mk4",
+    name: "Comandante C40",
+    brand: "Comandante",
+    model: "C40 MK4",
+    grinderDrive: "manual",
+    burrType: "Stainless steel conical burrs",
+    filterRange: "40-45 clicks",
+    notes: "Reference hand grinder for pour-over recipes.",
+    imageUrl: images.grinder,
+    status: "approved"
+  },
+  {
+    id: "catalog_comandante_c60",
+    name: "Comandante C60 Baracuda",
+    brand: "Comandante",
+    model: "C60 Baracuda",
+    grinderDrive: "manual",
+    burrType: "Stainless steel conical burrs",
+    filterRange: "35-45 clicks",
+    notes: "High-capacity hand grinder with espresso-capable adjustment.",
+    imageUrl: images.grinder,
+    status: "approved"
+  },
+  {
+    id: "catalog_1zpresso_zp6_special",
+    name: "1Zpresso ZP6 Special",
+    brand: "1Zpresso",
+    model: "ZP6 Special",
+    grinderDrive: "manual",
+    burrType: "Stainless steel heptagonal burrs",
+    filterRange: "4.0-5.5",
+    notes: "Clarity-focused hand grinder for filter coffee.",
+    imageUrl: images.grinder,
+    status: "approved"
+  },
+  {
+    id: "catalog_1zpresso_j_ultra",
+    name: "1Zpresso J-Ultra",
+    brand: "1Zpresso",
+    model: "J-Ultra",
+    grinderDrive: "manual",
+    burrType: "Stainless steel coated conical burrs",
+    filterRange: "Espresso 1.0-2.0, filter 3.5-5.5",
+    notes: "Espresso-focused hand grinder with fine external adjustment.",
+    imageUrl: images.grinder,
+    status: "approved"
+  },
+  {
+    id: "catalog_1zpresso_k_ultra",
+    name: "1Zpresso K-Ultra",
+    brand: "1Zpresso",
+    model: "K-Ultra",
+    grinderDrive: "manual",
+    burrType: "Stainless steel heptagonal burrs",
+    filterRange: "6.0-8.0",
+    notes: "All-round hand grinder with external adjustment.",
+    imageUrl: images.grinder,
+    status: "approved"
+  },
+  {
+    id: "catalog_kingrinder_k6",
+    name: "KINGrinder K6",
+    brand: "KINGrinder",
+    model: "K6",
+    grinderDrive: "manual",
+    burrType: "Stainless steel heptagonal burrs",
+    filterRange: "90-120 clicks",
+    notes: "Popular value hand grinder for filter and espresso.",
+    imageUrl: images.grinder,
+    status: "approved"
+  },
+  {
+    id: "catalog_timemore_chestnut_c3",
+    name: "Timemore Chestnut C3",
+    brand: "Timemore",
+    model: "Chestnut C3",
+    grinderDrive: "manual",
+    burrType: "S2C stainless steel burrs",
+    filterRange: "13-18 clicks",
+    notes: "Compact entry-level hand grinder.",
+    imageUrl: images.grinder,
+    status: "approved"
+  },
+  {
+    id: "catalog_fellow_ode_gen_2",
+    name: "Fellow Ode Gen 2",
+    brand: "Fellow",
+    model: "Ode Gen 2",
+    grinderDrive: "electric",
+    burrType: "64 mm flat burrs",
+    filterRange: "4-7",
+    notes: "Single-dose electric grinder for brewed coffee.",
+    imageUrl: images.grinder,
+    status: "approved"
+  },
+  {
+    id: "catalog_fellow_opus",
+    name: "Fellow Opus",
+    brand: "Fellow",
+    model: "Opus",
+    grinderDrive: "electric",
+    burrType: "40 mm conical burrs",
+    filterRange: "Espresso 1-3, filter 6-9",
+    notes: "Compact all-purpose grinder for espresso and brewed coffee.",
+    imageUrl: images.grinder,
+    status: "approved"
+  },
+  {
+    id: "catalog_df64_gen_2",
+    name: "DF64 Gen 2",
+    brand: "DF64",
+    model: "Gen 2",
+    grinderDrive: "electric",
+    burrType: "64 mm flat burrs",
+    filterRange: "50-70",
+    notes: "Single-dose flat burr grinder with broad burr compatibility.",
+    imageUrl: images.grinder,
+    status: "approved"
+  },
+  {
+    id: "catalog_baratza_encore_esp",
+    name: "Baratza Encore ESP",
+    brand: "Baratza",
+    model: "Encore ESP",
+    grinderDrive: "electric",
+    burrType: "40 mm conical burrs",
+    filterRange: "18-28",
+    notes: "Home grinder covering espresso and filter ranges.",
+    imageUrl: images.grinder,
+    status: "approved"
+  },
+  {
+    id: "catalog_baratza_vario_w_plus",
+    name: "Baratza Vario W+",
+    brand: "Baratza",
+    model: "Vario W+",
+    grinderDrive: "electric",
+    burrType: "54 mm flat burrs",
+    filterRange: "Espresso macro 1-2, filter macro 5-8",
+    notes: "Weight-based grinder that can cover espresso and filter.",
+    imageUrl: images.grinder,
+    status: "approved"
+  },
+  {
+    id: "catalog_eureka_mignon_specialita",
+    name: "Eureka Mignon Specialita",
+    brand: "Eureka",
+    model: "Mignon Specialita",
+    grinderDrive: "electric",
+    burrType: "55 mm flat burrs",
+    filterRange: "",
+    notes: "Quiet espresso-focused grinder with stepless adjustment.",
+    imageUrl: images.grinder,
+    status: "approved"
+  },
+  {
+    id: "catalog_niche_zero",
+    name: "Niche Zero",
+    brand: "Niche",
+    model: "Zero",
+    grinderDrive: "electric",
+    burrType: "63 mm conical burrs",
+    filterRange: "40-50",
+    notes: "Single-dose conical burr grinder for home espresso and filter.",
+    imageUrl: images.grinder,
+    status: "approved"
+  },
+  {
+    id: "catalog_niche_duo",
+    name: "Niche Duo",
+    brand: "Niche",
+    model: "Duo",
+    grinderDrive: "electric",
+    burrType: "83 mm flat burrs",
+    filterRange: "Espresso 10-20, filter 35-50",
+    notes: "Single-dose flat burr grinder with espresso/filter burr options.",
+    imageUrl: images.grinder,
+    status: "approved"
+  },
+  {
+    id: "catalog_varia_vs3",
+    name: "Varia VS3",
+    brand: "Varia",
+    model: "VS3",
+    grinderDrive: "electric",
+    burrType: "38 mm conical burrs",
+    filterRange: "4-8",
+    notes: "Compact single-dose grinder.",
+    imageUrl: images.grinder,
+    status: "approved"
+  },
+  {
+    id: "catalog_mahlkonig_ek43",
+    name: "Mahlkonig EK43",
+    brand: "Mahlkonig",
+    model: "EK43",
+    grinderDrive: "electric",
+    burrType: "98 mm flat burrs",
+    filterRange: "8-11",
+    notes: "Commercial grinder used as a shop benchmark.",
+    imageUrl: images.grinder,
+    status: "approved"
+  },
+  {
+    id: "catalog_mahlkonig_x54",
+    name: "Mahlkonig X54",
+    brand: "Mahlkonig",
+    model: "X54",
+    grinderDrive: "electric",
+    burrType: "54 mm flat burrs",
+    filterRange: "Espresso 1-3, filter 7-10",
+    notes: "Home all-rounder with espresso and filter presets.",
+    imageUrl: images.grinder,
+    status: "approved"
+  },
+  {
+    id: "catalog_lagom_p64",
+    name: "Option-O Lagom P64",
+    brand: "Option-O",
+    model: "Lagom P64",
+    grinderDrive: "electric",
+    burrType: "64 mm flat burrs",
+    filterRange: "Espresso 0.5-2.0, filter 6.0-9.0",
+    notes: "Single-dose flat burr grinder with burr-dependent settings.",
+    imageUrl: images.grinder,
+    status: "approved"
+  },
+  {
+    id: "catalog_lagom_mini",
+    name: "Option-O Lagom Mini",
+    brand: "Option-O",
+    model: "Lagom Mini",
+    grinderDrive: "electric",
+    burrType: "48 mm conical burrs",
+    filterRange: "Espresso 0.5-1.5, filter 3.5-6.0",
+    notes: "Compact single-dose grinder for home brewing.",
+    imageUrl: images.grinder,
+    status: "approved"
+  },
+  {
+    id: "catalog_timemore_sculptor_078",
+    name: "Timemore Sculptor 078",
+    brand: "Timemore",
+    model: "Sculptor 078",
+    grinderDrive: "electric",
+    burrType: "78 mm turbo flat burrs",
+    filterRange: "8-12",
+    notes: "Filter-focused electric grinder.",
+    imageUrl: images.grinder,
+    status: "approved"
+  },
+  {
+    id: "catalog_timemore_sculptor_078s",
+    name: "Timemore Sculptor 078S",
+    brand: "Timemore",
+    model: "Sculptor 078S",
+    grinderDrive: "electric",
+    burrType: "78 mm flat burrs",
+    filterRange: "Espresso 2-5, filter 10-14",
+    notes: "Espresso-capable version with broader adjustment.",
+    imageUrl: images.grinder,
+    status: "approved"
+  },
+  {
+    id: "catalog_weber_eg1",
+    name: "Weber EG-1",
+    brand: "Weber Workshops",
+    model: "EG-1",
+    grinderDrive: "electric",
+    burrType: "80 mm flat burrs",
+    filterRange: "Espresso 4-7, filter 9-12",
+    notes: "High-end single-dose grinder for espresso and filter.",
+    imageUrl: images.grinder,
+    status: "approved"
+  }
+];
+
+export const dripperCatalog: DripperCatalogItem[] = [
+  {
+    id: "catalog_hario_v60_02",
+    name: "Hario V60 02",
+    brand: "Hario",
+    model: "V60 02",
+    material: "Ceramic, plastic, glass, metal",
+    size: "02",
+    brewSpeed: "Fast",
+    compatibleFilters: "V60 02",
+    notes: "Classic conical dripper with high flow and clear cups.",
+    imageUrl: images.dripper,
+    status: "approved"
+  },
+  {
+    id: "catalog_origami_air_s",
+    name: "Origami Air S",
+    brand: "Origami",
+    model: "Air S",
+    material: "AS resin",
+    size: "S",
+    brewSpeed: "Fast to balanced",
+    compatibleFilters: "V60 01, Kalita 155",
+    notes: "Ribbed cone that supports conical and wave filters.",
+    imageUrl: images.dripper,
+    status: "approved"
+  },
+  {
+    id: "catalog_origami_air_m",
+    name: "Origami Air M",
+    brand: "Origami",
+    model: "Air M",
+    material: "AS resin",
+    size: "M",
+    brewSpeed: "Fast to balanced",
+    compatibleFilters: "V60 02, Kalita 185",
+    notes: "Flexible dripper for one or two-cup recipes.",
+    imageUrl: images.dripper,
+    status: "approved"
+  },
+  {
+    id: "catalog_kalita_wave_185",
+    name: "Kalita Wave 185",
+    brand: "Kalita",
+    model: "Wave 185",
+    material: "Stainless steel, glass, ceramic",
+    size: "185",
+    brewSpeed: "Balanced",
+    compatibleFilters: "Kalita 185",
+    notes: "Flat-bottom dripper with repeatable extraction.",
+    imageUrl: images.dripper,
+    status: "approved"
+  },
+  {
+    id: "catalog_hario_switch_03",
+    name: "Hario Switch 03",
+    brand: "Hario",
+    model: "Switch 03",
+    material: "Glass and silicone",
+    size: "03",
+    brewSpeed: "Immersion / hybrid",
+    compatibleFilters: "V60 03",
+    notes: "Immersion-capable V60-style dripper.",
+    imageUrl: images.dripper,
+    status: "approved"
+  },
+  {
+    id: "catalog_orea_v4_wide",
+    name: "Orea V4 Wide",
+    brand: "Orea",
+    model: "V4 Wide",
+    material: "Polypropylene",
+    size: "Wide",
+    brewSpeed: "Fast",
+    compatibleFilters: "Orea flat, negotiated Kalita 185",
+    notes: "Modern fast flat-bottom brewer with interchangeable bottoms.",
+    imageUrl: images.dripper,
+    status: "approved"
+  },
+  {
+    id: "catalog_april_plastic",
+    name: "April Plastic Brewer",
+    brand: "April",
+    model: "Plastic Brewer",
+    material: "Plastic",
+    size: "155/185 style",
+    brewSpeed: "Balanced",
+    compatibleFilters: "April, Kalita 155/185",
+    notes: "Flat-bottom brewer tuned for April-style pulse pours.",
+    imageUrl: images.dripper,
+    status: "approved"
+  },
+  {
+    id: "catalog_orea_big_boy",
+    name: "Orea Big Boy",
+    brand: "Orea",
+    model: "Big Boy",
+    material: "Polypropylene",
+    size: "Large",
+    brewSpeed: "Fast",
+    compatibleFilters: "Large flat-bottom filters",
+    notes: "Large batch flat-bottom brewer.",
+    imageUrl: images.dripper,
+    status: "approved"
+  },
+  {
+    id: "catalog_cafec_flower_02",
+    name: "Cafec Flower Dripper 02",
+    brand: "Cafec",
+    model: "Flower 02",
+    material: "Tritan, ceramic",
+    size: "02",
+    brewSpeed: "Fast",
+    compatibleFilters: "V60 02, Cafec cone 02",
+    notes: "Cone dripper with deep petal ribs and high flow.",
+    imageUrl: images.dripper,
+    status: "approved"
+  },
+  {
+    id: "catalog_clever_large",
+    name: "Clever Dripper Large",
+    brand: "Clever",
+    model: "Large",
+    material: "Plastic",
+    size: "Large",
+    brewSpeed: "Immersion",
+    compatibleFilters: "Melitta #4",
+    notes: "Immersion brewer with drawdown release valve.",
+    imageUrl: images.dripper,
+    status: "approved"
+  },
+  {
+    id: "catalog_tricolate",
+    name: "Tricolate Brewer",
+    brand: "Tricolate",
+    model: "Brewer",
+    material: "Tritan",
+    size: "Standard",
+    brewSpeed: "Slow / high extraction",
+    compatibleFilters: "Tricolate filters",
+    notes: "No-bypass brewer for high extraction filter recipes.",
+    imageUrl: images.dripper,
+    status: "approved"
+  },
+  {
+    id: "catalog_nextlevel_pulsar",
+    name: "NextLevel Pulsar",
+    brand: "NextLevel",
+    model: "Pulsar",
+    material: "Plastic",
+    size: "Standard",
+    brewSpeed: "No-bypass / controllable",
+    compatibleFilters: "Pulsar filters",
+    notes: "No-bypass brewer with flow-control valve.",
+    imageUrl: images.dripper,
+    status: "approved"
   }
 ];
 
@@ -299,16 +750,35 @@ export const brewLogs: BrewLog[] = [
 ];
 
 export const feedItems: FeedItem[] = [
-  { id: "feed_1", type: "recipe", recipe: recipes[0], author: recipes[0].author, createdAt: recipes[0].updatedAt },
-  { id: "feed_2", type: "brew_log", brewLog: brewLogs[0], author: currentUser, createdAt: brewLogs[0].brewedAt },
-  { id: "feed_3", type: "recipe", recipe: recipes[1], author: recipes[1].author, createdAt: recipes[1].updatedAt }
+  {
+    id: "feed_1",
+    type: "recipe",
+    recipe: recipes[0],
+    author: recipes[0].author,
+    createdAt: recipes[0].updatedAt
+  },
+  {
+    id: "feed_2",
+    type: "brew_log",
+    brewLog: brewLogs[0],
+    author: currentUser,
+    createdAt: brewLogs[0].brewedAt
+  },
+  {
+    id: "feed_3",
+    type: "recipe",
+    recipe: recipes[1],
+    author: recipes[1].author,
+    createdAt: recipes[1].updatedAt
+  }
 ];
 
 export const challenges: Challenge[] = [
   {
     id: "challenge_bloom",
     title: "Bloom control week",
-    description: "Dial bloom water and agitation across three brews, then compare clarity and sweetness.",
+    description:
+      "Dial bloom water and agitation across three brews, then compare clarity and sweetness.",
     clubSlug: "pourover-lab",
     startsAt: "2026-06-08T00:00:00.000Z",
     endsAt: "2026-06-15T00:00:00.000Z",

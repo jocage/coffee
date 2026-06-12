@@ -1,7 +1,15 @@
 import { z } from "zod";
 
 export const visibilitySchema = z.enum(["private", "unlisted", "followers", "public"]);
-export const brewMethodSchema = z.enum(["V60", "Origami", "Kalita", "AeroPress", "Espresso", "French Press", "Switch"]);
+export const brewMethodSchema = z.enum([
+  "V60",
+  "Origami",
+  "Kalita",
+  "AeroPress",
+  "Espresso",
+  "French Press",
+  "Switch"
+]);
 
 export const recipeStepInputSchema = z.object({
   label: z.string().min(1, "Step label is required"),
@@ -23,6 +31,7 @@ export const recipeInputSchema = z.object({
   waterGrams: z.coerce.number().positive(),
   temperatureCelsius: z.coerce.number().min(50).max(100),
   grindLabel: z.string().trim().min(2).max(64),
+  grindSetting: z.string().trim().max(96).optional(),
   steps: z.array(recipeStepInputSchema).min(1)
 });
 
@@ -31,6 +40,9 @@ export const remixRecipeInputSchema = z.object({
   path: z.string().min(1).default("/recipes")
 });
 
-export function validateStepWater(totalWaterGrams: number, steps: Array<{ cumulativeWaterGrams: number }>): boolean {
+export function validateStepWater(
+  totalWaterGrams: number,
+  steps: Array<{ cumulativeWaterGrams: number }>
+): boolean {
   return steps.every((step) => step.cumulativeWaterGrams <= totalWaterGrams);
 }

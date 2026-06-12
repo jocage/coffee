@@ -16,9 +16,13 @@ import {
   getContentReportsFromDb,
   getConversationByIdFromDb,
   getConversationsFromDb,
+  getDripperCatalogFromDb,
+  getDripperCatalogItemByIdFromDb,
   getFeedFromDb,
   getGearItemByIdFromDb,
   getGearFromDb,
+  getGrinderCatalogFromDb,
+  getGrinderCatalogItemByIdFromDb,
   getNotificationsFromDb,
   getProfileFromDb,
   getProfilesFromDb,
@@ -30,7 +34,18 @@ import {
   getSocialCountsForTargetFromDb,
   getViewerFromDb
 } from "@/lib/data/repositories";
-import type { BrewLog, BrewMethod, CoffeeBean, FeedItem, GearItem, Recipe, SocialTargetType, Visibility } from "@/lib/domain";
+import type {
+  BrewLog,
+  BrewMethod,
+  CoffeeBean,
+  DripperCatalogStatus,
+  FeedItem,
+  GearItem,
+  GrinderCatalogStatus,
+  Recipe,
+  SocialTargetType,
+  Visibility
+} from "@/lib/domain";
 import { recipes as seedRecipes } from "@/lib/data/seed";
 import { canReadVisibility } from "@/lib/permissions/visibility";
 
@@ -61,7 +76,9 @@ export async function getDashboardData() {
   };
 }
 
-export async function getHomeFeed(tab: "for-you" | "following" | "popular" | "latest" = "for-you"): Promise<FeedItem[]> {
+export async function getHomeFeed(
+  tab: "for-you" | "following" | "popular" | "latest" = "for-you"
+): Promise<FeedItem[]> {
   noStore();
   const [viewer, feedItems] = await Promise.all([getCurrentUser(), getFeedFromDb()]);
   const visible = feedItems.filter((item) => {
@@ -89,10 +106,7 @@ export async function searchRecipes(filters: {
   return getRecipesFromDb(filters);
 }
 
-export async function getMyRecipes(filters?: {
-  query?: string;
-  visibility?: Visibility | "all";
-}) {
+export async function getMyRecipes(filters?: { query?: string; visibility?: Visibility | "all" }) {
   noStore();
   const viewer = await getCurrentUser();
   return getRecipesFromDb({ ...filters, ownerId: viewer.id });
@@ -106,11 +120,14 @@ export async function getSavedRecipes(filters?: {
   const recipes = await getSavedRecipesFromDb();
   return recipes.filter((recipe) => {
     const queryMatches = filters?.query
-      ? [recipe.title, recipe.subtitle, recipe.description, recipe.author.displayName].some((value) =>
-          value.toLowerCase().includes(filters.query?.toLowerCase() ?? "")
+      ? [recipe.title, recipe.subtitle, recipe.description, recipe.author.displayName].some(
+          (value) => value.toLowerCase().includes(filters.query?.toLowerCase() ?? "")
         )
       : true;
-    const visibilityMatches = filters?.visibility && filters.visibility !== "all" ? recipe.visibility === filters.visibility : true;
+    const visibilityMatches =
+      filters?.visibility && filters.visibility !== "all"
+        ? recipe.visibility === filters.visibility
+        : true;
     return queryMatches && visibilityMatches;
   });
 }
@@ -189,7 +206,11 @@ export async function getPublicCoffeeContent(slug: string): Promise<{
   brewLogs: BrewLog[];
 } | null> {
   noStore();
-  const [coffees, recipes, brewLogs] = await Promise.all([getCoffeesFromDb(), getRecipesFromDb({ visibility: "public" }), getBrewLogsFromDb()]);
+  const [coffees, recipes, brewLogs] = await Promise.all([
+    getCoffeesFromDb(),
+    getRecipesFromDb({ visibility: "public" }),
+    getBrewLogsFromDb()
+  ]);
   const coffee = coffees.find((item) => item.slug === slug || item.id === slug);
 
   if (!coffee) {
@@ -198,8 +219,12 @@ export async function getPublicCoffeeContent(slug: string): Promise<{
 
   return {
     coffee,
-    recipes: recipes.filter((recipe) => recipe.coffee.id === coffee.id && recipe.visibility === "public"),
-    brewLogs: brewLogs.filter((brewLog) => brewLog.coffee.id === coffee.id && brewLog.visibility === "public")
+    recipes: recipes.filter(
+      (recipe) => recipe.coffee.id === coffee.id && recipe.visibility === "public"
+    ),
+    brewLogs: brewLogs.filter(
+      (brewLog) => brewLog.coffee.id === coffee.id && brewLog.visibility === "public"
+    )
   };
 }
 
@@ -213,26 +238,61 @@ export async function getGearItemById(id: string) {
   return getGearItemByIdFromDb(id);
 }
 
+export async function getGrinderCatalog(filters?: {
+  query?: string;
+  status?: GrinderCatalogStatus | "all";
+}) {
+  noStore();
+  return getGrinderCatalogFromDb(filters);
+}
+
+export async function getGrinderCatalogItemById(id: string) {
+  noStore();
+  return getGrinderCatalogItemByIdFromDb(id);
+}
+
+export async function getDripperCatalog(filters?: {
+  query?: string;
+  status?: DripperCatalogStatus | "all";
+}) {
+  noStore();
+  return getDripperCatalogFromDb(filters);
+}
+
+export async function getDripperCatalogItemById(id: string) {
+  noStore();
+  return getDripperCatalogItemByIdFromDb(id);
+}
+
 export async function getPublicGearContent(slug: string): Promise<{
   gear: GearItem;
   recipes: Recipe[];
   brewLogs: BrewLog[];
 } | null> {
   noStore();
-  const [gearItems, recipes, brewLogs] = await Promise.all([getGearFromDb(), getRecipesFromDb({ visibility: "public" }), getBrewLogsFromDb()]);
+  const [gearItems, recipes, brewLogs] = await Promise.all([
+    getGearFromDb(),
+    getRecipesFromDb({ visibility: "public" }),
+    getBrewLogsFromDb()
+  ]);
   const gear = gearItems.find((item) => item.id === slug || slugifyGear(item) === slug);
 
   if (!gear) {
     return null;
   }
 
-  const matchingRecipes = recipes.filter((recipe) => recipe.visibility === "public" && recipe.gear.some((item) => item.id === gear.id));
+  const matchingRecipes = recipes.filter(
+    (recipe) => recipe.visibility === "public" && recipe.gear.some((item) => item.id === gear.id)
+  );
 
   return {
     gear,
     recipes: matchingRecipes,
     brewLogs: brewLogs.filter(
-      (brewLog) => brewLog.visibility === "public" && brewLog.recipe && matchingRecipes.some((recipe) => recipe.id === brewLog.recipe?.id)
+      (brewLog) =>
+        brewLog.visibility === "public" &&
+        brewLog.recipe &&
+        matchingRecipes.some((recipe) => recipe.id === brewLog.recipe?.id)
     )
   };
 }
@@ -264,7 +324,11 @@ export async function getBrewLogById(id: string) {
 
 export async function getCommunityOverview() {
   noStore();
-  const [clubs, challenges, notifications] = await Promise.all([getClubsFromDb(), getChallengesFromDb(), getNotificationsFromDb()]);
+  const [clubs, challenges, notifications] = await Promise.all([
+    getClubsFromDb(),
+    getChallengesFromDb(),
+    getNotificationsFromDb()
+  ]);
   return {
     clubs,
     challenges,
@@ -318,7 +382,9 @@ export async function getSocialCountsForTarget(input: {
   return getSocialCountsForTargetFromDb(input);
 }
 
-export async function getContentReports(status?: "open" | "reviewing" | "resolved" | "dismissed" | "all") {
+export async function getContentReports(
+  status?: "open" | "reviewing" | "resolved" | "dismissed" | "all"
+) {
   noStore();
   return getContentReportsFromDb(status);
 }

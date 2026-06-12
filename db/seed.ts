@@ -3,7 +3,7 @@ import { user } from "@/db/schema/auth";
 import { brewLogs } from "@/db/schema/brews";
 import { challenges, clubs } from "@/db/schema/clubs";
 import { coffeeBeans } from "@/db/schema/coffee";
-import { gearItems } from "@/db/schema/gear";
+import { dripperCatalogItems, gearItems, grinderCatalogItems } from "@/db/schema/gear";
 import { profiles } from "@/db/schema/profiles";
 import { recipeSteps, recipes as recipesTable } from "@/db/schema/recipes";
 import {
@@ -12,7 +12,9 @@ import {
   clubs as seedClubs,
   coffees as seedCoffees,
   currentUser,
+  dripperCatalog as seedDripperCatalog,
   gear as seedGear,
+  grinderCatalog as seedGrinderCatalog,
   recipes as seedRecipes
 } from "@/lib/data/seed";
 import { calculateRatio } from "@/modules/recipes/recipe-math";
@@ -78,6 +80,43 @@ async function main() {
         imageUrl: item.imageUrl,
         defaultForMethod: item.defaultForMethod,
         visibility: item.visibility
+      }))
+    )
+    .onConflictDoNothing();
+
+  await db
+    .insert(grinderCatalogItems)
+    .values(
+      seedGrinderCatalog.map((item) => ({
+        id: item.id,
+        name: item.name,
+        brand: item.brand,
+        model: item.model,
+        grinderDrive: item.grinderDrive,
+        burrType: item.burrType,
+        filterRange: item.filterRange,
+        notes: item.notes,
+        imageUrl: item.imageUrl,
+        status: item.status
+      }))
+    )
+    .onConflictDoNothing();
+
+  await db
+    .insert(dripperCatalogItems)
+    .values(
+      seedDripperCatalog.map((item) => ({
+        id: item.id,
+        name: item.name,
+        brand: item.brand,
+        model: item.model,
+        material: item.material,
+        size: item.size,
+        brewSpeed: item.brewSpeed,
+        compatibleFilters: item.compatibleFilters,
+        notes: item.notes,
+        imageUrl: item.imageUrl,
+        status: item.status
       }))
     )
     .onConflictDoNothing();
