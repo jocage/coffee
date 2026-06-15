@@ -3,6 +3,9 @@ import { brewMethodSchema, visibilitySchema } from "@/lib/validators/recipes";
 
 export const profileCommentPolicySchema = z.enum(["disabled", "followers", "public"]);
 export const messagePolicySchema = z.enum(["none", "followers", "public"]);
+export const weightUnitSchema = z.enum(["grams", "ounces"]);
+export const temperatureUnitSchema = z.enum(["celsius", "fahrenheit"]);
+export const ratioStyleSchema = z.enum(["brew_ratio", "percent"]);
 
 export const handleSchema = z
   .string()
@@ -31,6 +34,12 @@ export const profilePrivacyInputSchema = z.object({
   messagePolicy: messagePolicySchema.default("followers"),
   showGearOnProfile: z.coerce.boolean().default(false),
   showCoffeeOnProfile: z.coerce.boolean().default(false)
+});
+
+export const profileUnitsInputSchema = z.object({
+  weightUnit: weightUnitSchema.default("grams"),
+  temperatureUnit: temperatureUnitSchema.default("celsius"),
+  ratioStyle: ratioStyleSchema.default("brew_ratio")
 });
 
 export const onboardingInputSchema = profileInputSchema.extend({

@@ -30,6 +30,9 @@ export const currentUser: UserProfile = {
   messagePolicy: "followers",
   showGearOnProfile: true,
   showCoffeeOnProfile: true,
+  weightUnit: "grams",
+  temperatureUnit: "celsius",
+  ratioStyle: "brew_ratio",
   favoriteMethods: ["V60", "Origami", "Kalita"],
   stats: {
     recipes: 128,
@@ -57,6 +60,9 @@ export const creators: UserProfile[] = [
     messagePolicy: "followers",
     showGearOnProfile: true,
     showCoffeeOnProfile: true,
+    weightUnit: "grams",
+    temperatureUnit: "celsius",
+    ratioStyle: "brew_ratio",
     favoriteMethods: ["V60", "AeroPress"],
     stats: {
       recipes: 42,

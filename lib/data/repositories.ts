@@ -63,11 +63,14 @@ import type {
   Notification,
   Recipe,
   RecipeStep,
+  RatioStyle,
   RoastLevel,
   SocialTargetType,
   SocialCounts,
+  TemperatureUnit,
   UserProfile,
-  Visibility
+  Visibility,
+  WeightUnit
 } from "@/lib/domain";
 import { auth } from "@/lib/auth/auth";
 import { isAdminProfile } from "@/lib/permissions/admin";
@@ -1281,6 +1284,9 @@ export async function updateProfileInDb(input: {
       messagePolicy: existingProfile?.messagePolicy ?? "followers",
       showGearOnProfile: existingProfile?.showGearOnProfile ?? true,
       showCoffeeOnProfile: existingProfile?.showCoffeeOnProfile ?? true,
+      weightUnit: existingProfile?.weightUnit ?? "grams",
+      temperatureUnit: existingProfile?.temperatureUnit ?? "celsius",
+      ratioStyle: existingProfile?.ratioStyle ?? "brew_ratio",
       favoriteMethods:
         input.favoriteMethods ??
         (existingProfile?.favoriteMethods as BrewMethod[] | undefined) ??
@@ -1309,6 +1315,24 @@ export async function updateProfilePrivacyInDb(input: {
       messagePolicy: input.messagePolicy,
       showGearOnProfile: input.showGearOnProfile,
       showCoffeeOnProfile: input.showCoffeeOnProfile,
+      updatedAt: new Date()
+    })
+    .where(eq(profiles.userId, viewerId));
+}
+
+export async function updateProfileUnitsInDb(input: {
+  weightUnit: WeightUnit;
+  temperatureUnit: TemperatureUnit;
+  ratioStyle: RatioStyle;
+}) {
+  const viewerId = await ensureCurrentIdentity();
+
+  await db
+    .update(profiles)
+    .set({
+      weightUnit: input.weightUnit,
+      temperatureUnit: input.temperatureUnit,
+      ratioStyle: input.ratioStyle,
       updatedAt: new Date()
     })
     .where(eq(profiles.userId, viewerId));
@@ -2119,6 +2143,9 @@ export async function ensureDevIdentity() {
       messagePolicy: seedCurrentUser.messagePolicy,
       showGearOnProfile: seedCurrentUser.showGearOnProfile,
       showCoffeeOnProfile: seedCurrentUser.showCoffeeOnProfile,
+      weightUnit: seedCurrentUser.weightUnit,
+      temperatureUnit: seedCurrentUser.temperatureUnit,
+      ratioStyle: seedCurrentUser.ratioStyle,
       favoriteMethods: seedCurrentUser.favoriteMethods
     })
     .onConflictDoNothing();
@@ -2333,6 +2360,9 @@ export async function ensureCurrentIdentity(): Promise<string> {
       location: "",
       avatarUrl: sessionUser.image ?? seedCurrentUser.avatarUrl,
       coverUrl: seedCurrentUser.coverUrl,
+      weightUnit: "grams",
+      temperatureUnit: "celsius",
+      ratioStyle: "brew_ratio",
       favoriteMethods: []
     });
   }
@@ -2409,6 +2439,9 @@ function mapProfile(row: DbProfile): UserProfile {
     messagePolicy: row.messagePolicy ?? "followers",
     showGearOnProfile: row.showGearOnProfile ?? true,
     showCoffeeOnProfile: row.showCoffeeOnProfile ?? true,
+    weightUnit: row.weightUnit ?? "grams",
+    temperatureUnit: row.temperatureUnit ?? "celsius",
+    ratioStyle: row.ratioStyle ?? "brew_ratio",
     favoriteMethods: row.favoriteMethods as BrewMethod[],
     stats: {
       recipes: 0,

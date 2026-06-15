@@ -55,6 +55,23 @@ test("profile privacy defaults apply to new content forms", async ({ page }) => 
   await expect(page.getByRole("heading", { name: "Gear" })).toBeHidden();
 });
 
+test("unit settings persist display preferences", async ({ page }) => {
+  await page.goto("/settings/units");
+  await page.getByLabel("Weight unit").selectOption("ounces");
+  await page.getByLabel("Temperature unit").selectOption("fahrenheit");
+  await page.getByLabel("Ratio style").selectOption("percent");
+  await Promise.all([
+    page.waitForURL("**/settings/units?saved=1"),
+    page.getByRole("button", { name: "Save units" }).click()
+  ]);
+
+  await expect(page.getByRole("status")).toContainText("Unit settings saved.");
+  await expect(page.getByLabel("Weight unit")).toHaveValue("ounces");
+  await expect(page.getByLabel("Temperature unit")).toHaveValue("fahrenheit");
+  await expect(page.getByLabel("Ratio style")).toHaveValue("percent");
+  await expect(page.getByText("oz / F / %")).toBeVisible();
+});
+
 test("coffee form persists a new coffee", async ({ page }) => {
   const name = `Playwright Shakiso ${Date.now()}`;
 

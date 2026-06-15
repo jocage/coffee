@@ -29,7 +29,8 @@ const sections = [
     title: "Units",
     description: "Preferred temperature, weight and ratio display options.",
     icon: Ruler,
-    status: "Planned"
+    href: "/settings/units",
+    status: "Available"
   },
   {
     title: "Notifications",

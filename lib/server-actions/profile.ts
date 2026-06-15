@@ -7,9 +7,15 @@ import {
   createGrinderInDb,
   isHandleAvailableInDb,
   updateProfileInDb,
-  updateProfilePrivacyInDb
+  updateProfilePrivacyInDb,
+  updateProfileUnitsInDb
 } from "@/lib/data/repositories";
-import { onboardingInputSchema, profileInputSchema, profilePrivacyInputSchema } from "@/lib/validators/profile";
+import {
+  onboardingInputSchema,
+  profileInputSchema,
+  profilePrivacyInputSchema,
+  profileUnitsInputSchema
+} from "@/lib/validators/profile";
 import { formDataToObject } from "@/lib/server-actions/result";
 
 export async function saveProfileAction(formData: FormData): Promise<void> {
@@ -57,6 +63,22 @@ export async function savePrivacyAction(formData: FormData): Promise<void> {
   revalidatePath("/collections");
   revalidatePath("/gear");
   redirect("/settings/privacy?saved=1");
+}
+
+export async function saveUnitsAction(formData: FormData): Promise<void> {
+  const parsed = profileUnitsInputSchema.safeParse(formDataToObject(formData));
+
+  if (!parsed.success) {
+    throw new Error("Unit settings could not be saved");
+  }
+
+  await updateProfileUnitsInDb(parsed.data);
+  revalidatePath("/settings");
+  revalidatePath("/settings/units");
+  revalidatePath("/profile");
+  revalidatePath("/recipes");
+  revalidatePath("/brews");
+  redirect("/settings/units?saved=1");
 }
 
 export async function completeOnboardingAction(formData: FormData): Promise<void> {

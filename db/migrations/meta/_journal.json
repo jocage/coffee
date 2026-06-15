@@ -71,6 +71,13 @@
       "when": 1781298340520,
       "tag": "0009_lovely_microbe",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1781554122046,
+      "tag": "0010_daily_major_mapleleaf",
+      "breakpoints": true
     }
   ]
 }

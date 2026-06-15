@@ -28,6 +28,9 @@ export const profiles = pgTable(
       .default("followers"),
     showGearOnProfile: boolean("show_gear_on_profile").notNull().default(true),
     showCoffeeOnProfile: boolean("show_coffee_on_profile").notNull().default(true),
+    weightUnit: text("weight_unit").$type<"grams" | "ounces">().notNull().default("grams"),
+    temperatureUnit: text("temperature_unit").$type<"celsius" | "fahrenheit">().notNull().default("celsius"),
+    ratioStyle: text("ratio_style").$type<"brew_ratio" | "percent">().notNull().default("brew_ratio"),
     favoriteMethods: jsonb("favorite_methods").$type<string[]>().notNull().default([]),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()

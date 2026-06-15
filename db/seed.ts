@@ -47,6 +47,9 @@ async function main() {
       messagePolicy: currentUser.messagePolicy,
       showGearOnProfile: currentUser.showGearOnProfile,
       showCoffeeOnProfile: currentUser.showCoffeeOnProfile,
+      weightUnit: currentUser.weightUnit,
+      temperatureUnit: currentUser.temperatureUnit,
+      ratioStyle: currentUser.ratioStyle,
       favoriteMethods: currentUser.favoriteMethods
     })
     .onConflictDoUpdate({
@@ -63,6 +66,9 @@ async function main() {
         messagePolicy: currentUser.messagePolicy,
         showGearOnProfile: currentUser.showGearOnProfile,
         showCoffeeOnProfile: currentUser.showCoffeeOnProfile,
+        weightUnit: currentUser.weightUnit,
+        temperatureUnit: currentUser.temperatureUnit,
+        ratioStyle: currentUser.ratioStyle,
         favoriteMethods: currentUser.favoriteMethods
       }
     });
