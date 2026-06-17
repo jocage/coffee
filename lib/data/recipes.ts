@@ -478,6 +478,7 @@ export async function createBrewLogInDb(input: {
   pressureBars?: number;
   rating: number;
   tastingNotes: string;
+  photoUrl?: string;
   visibility: Visibility;
 }) {
   const viewerId = await ensureCurrentIdentity();
@@ -509,6 +510,7 @@ export async function createBrewLogInDb(input: {
     rating: input.rating,
     tastingNotes: input.tastingNotes,
     flavorTags: [],
+    photos: input.photoUrl ? [input.photoUrl] : [],
     visibility: input.visibility
   });
 
@@ -540,6 +542,7 @@ export async function updateBrewLogInDb(input: {
   pressureBars?: number;
   rating: number;
   tastingNotes: string;
+  photoUrl?: string;
   visibility: Visibility;
 }) {
   const viewerId = await ensureCurrentIdentity();
@@ -568,6 +571,7 @@ export async function updateBrewLogInDb(input: {
       pressureBars: input.pressureBars,
       rating: input.rating,
       tastingNotes: input.tastingNotes,
+      photos: input.photoUrl ? [input.photoUrl] : [],
       visibility: input.visibility
     })
     .where(and(eq(brewLogsTable.id, input.id), eq(brewLogsTable.ownerId, viewerId)))

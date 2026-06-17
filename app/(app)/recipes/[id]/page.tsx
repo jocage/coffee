@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Edit, Share2, Trash2 } from "lucide-react";
+import { RecipeRemixDiff } from "@/components/coffee/recipe-remix-diff";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { StepTable } from "@/components/coffee/step-table";
@@ -19,6 +20,8 @@ export default async function OwnerRecipePage({ params }: { params: Promise<{ id
     notFound();
   }
 
+  const originalRecipe = recipe.parentRecipeId ? await getRecipeById(recipe.parentRecipeId) : null;
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-5 md:px-6">
       <div className="mb-5 flex items-center justify-between gap-3">
@@ -26,7 +29,7 @@ export default async function OwnerRecipePage({ params }: { params: Promise<{ id
           <h1 className="serif text-4xl">{recipe.title}</h1>
           <p className="text-sm text-[var(--text-muted)]">
             Owner view · {recipe.visibility}
-            {recipe.parentRecipeId ? ` · Remix of ${recipe.parentRecipeId}` : ""}
+            {originalRecipe ? ` · Remix of ${originalRecipe.title}` : ""}
           </p>
         </div>
         <div className="flex gap-2">
@@ -44,6 +47,11 @@ export default async function OwnerRecipePage({ params }: { params: Promise<{ id
           </form>
         </div>
       </div>
+      {originalRecipe ? (
+        <div className="mb-5">
+          <RecipeRemixDiff remix={recipe} original={originalRecipe} />
+        </div>
+      ) : null}
       <Card>
         <CardTitle>Steps</CardTitle>
         <div className="mt-4">

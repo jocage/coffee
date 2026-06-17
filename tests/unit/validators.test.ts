@@ -5,6 +5,7 @@ import { recipeInputSchema, validateStepWater } from "@/lib/validators/recipes";
 import { brewLogInputSchema } from "@/lib/validators/brews";
 import { coffeeInputSchema } from "@/lib/validators/coffee";
 import { grinderInputSchema } from "@/lib/validators/gear";
+import { onboardingInputSchema } from "@/lib/validators/profile";
 import { commentInputSchema, hideReportedContentInputSchema, reportInputSchema } from "@/lib/validators/social";
 import { signInInputSchema, signUpInputSchema } from "@/lib/validators/auth";
 
@@ -148,6 +149,20 @@ describe("validators", () => {
         path: "/admin/moderation"
       }).success
     ).toBe(true);
+  });
+
+  it("accepts onboarding suggested follows and clubs", () => {
+    const result = onboardingInputSchema.safeParse({
+      displayName: "Alex Brewer",
+      handle: "alexbrews",
+      bio: "",
+      defaultVisibility: "private",
+      favoriteMethods: ["V60", "Espresso"],
+      suggestedFollowIds: ["user_tetsu"],
+      suggestedClubIds: ["club_pourover"]
+    });
+
+    expect(result.success).toBe(true);
   });
 
   it("validates auth form payloads", () => {

@@ -5,7 +5,9 @@ import { redirect } from "next/navigation";
 import {
   createCoffeeInDb,
   createGrinderInDb,
+  followUserInDb,
   isHandleAvailableInDb,
+  joinClubInDb,
   updateProfileInDb,
   updateProfilePrivacyInDb,
   updateProfileUnitsInDb
@@ -84,7 +86,9 @@ export async function saveUnitsAction(formData: FormData): Promise<void> {
 export async function completeOnboardingAction(formData: FormData): Promise<void> {
   const parsed = onboardingInputSchema.safeParse({
     ...formDataToObject(formData),
-    favoriteMethods: formData.getAll("favoriteMethods")
+    favoriteMethods: formData.getAll("favoriteMethods"),
+    suggestedFollowIds: formData.getAll("suggestedFollowIds"),
+    suggestedClubIds: formData.getAll("suggestedClubIds")
   });
 
   if (!parsed.success) {
@@ -118,9 +122,16 @@ export async function completeOnboardingAction(formData: FormData): Promise<void
     });
   }
 
+  await Promise.all([
+    ...parsed.data.suggestedFollowIds.map((profileId) => followUserInDb(profileId)),
+    ...parsed.data.suggestedClubIds.map((clubId) => joinClubInDb(clubId))
+  ]);
+
   revalidatePath("/profile");
   revalidatePath("/settings/profile");
   revalidatePath("/coffees");
   revalidatePath("/gear");
+  revalidatePath("/community");
+  revalidatePath("/notifications");
   redirect("/home");
 }

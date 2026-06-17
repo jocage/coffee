@@ -78,6 +78,13 @@
       "when": 1781554122046,
       "tag": "0010_daily_major_mapleleaf",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1781726249744,
+      "tag": "0011_dashing_talisman",
+      "breakpoints": true
     }
   ]
 }

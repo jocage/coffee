@@ -28,6 +28,102 @@
 - **P2** — Beta/social growth.
 - **P3** — polish/advanced.
 
+### Progress checklist
+
+Audit date: 2026-06-17
+Rule: `[x]` means there is concrete implementation evidence in the repo. `[ ] partial` means code exists, but the planned scope or Definition of Done still has open work. `[ ]` means not confirmed.
+
+#### Sprint 1 — Foundation
+
+- [x] A01 Bootstrap Next app — Next App Router, TypeScript, Tailwind, grouped routes, shell, lint/format/type/test tooling are present.
+- [x] A02 Design tokens + UI kit — global CSS tokens and UI primitives exist, including `/dev/ui`.
+- [x] A03 Database setup — Docker Postgres 18, Drizzle config, schema folders, migrations and DB scripts are present.
+- [x] A04 Better Auth integration — Better Auth, Drizzle adapter, email/password, Google config placeholder, auth route, client helper and route guards are present.
+- [x] A05 Media upload foundation — R2/S3 abstraction, local fallback, `media_assets`, presign/complete/local upload routes, protected local asset serving and crop upload component are present.
+
+#### Sprint 2 — Auth + Profile + App Shell
+
+- [x] S02 Sign Up / Sign In — forms, Zod validators, Better Auth client actions and error/loading states are present.
+- [x] S03 Onboarding — multi-step onboarding flow, handle/profile setup, methods, optional gear/coffee, privacy and suggested follows/clubs are present.
+- [x] S04 App Shell Desktop — desktop sidebar, top search/notifications/avatar and protected app layout are present.
+- [x] S05 App Shell Mobile — mobile bottom nav and safe-area-aware app shell are present.
+- [x] S10 Public User Profile — public/self profile routes, visibility-aware profile content and follow actions are present.
+- [x] S11 Edit Profile — profile form, handle/display fields, default visibility and avatar/cover uploads are present.
+
+#### Sprint 3 — Recipes
+
+- [x] S12 My Recipes List — own/saved recipe views, search/filter controls and saved tab are present.
+- [x] S13 Public Recipe Detail — public recipe route, metadata/OG, comments, brew CTA, save/remix/report/collection actions are present.
+- [x] S14 Owner Recipe Detail / Edit Entry — owner detail/edit routes, update/delete/publish-style actions and remix attribution display are present.
+- [x] S15 Add Recipe Desktop — recipe form, cover upload, parameters, step editor, draft save and publish button are present.
+- [x] S16 Add Recipe Mobile Wizard — mobile 8-step wizard, back/forward navigation, draft save at any step and preserved form state are present.
+- [x] S17 Recipe Remix Diff — remix action, draft copy, parent attribution and dose/water/temp/grind/time/steps diff UI are present.
+
+#### Sprint 4 — Brew Mode + Logs
+
+- [x] S18 Live Brew Mode Desktop — timer state machine, step transitions, keyboard controls and end-brew flow are present.
+- [x] S19 Live Brew Mode Mobile — full-screen mobile timer, one-handed controls, progress ring, next pour target, haptics and voice cue toggles are present.
+- [x] S20 Post-Brew / Add Brew Log Desktop — create brew log form, recipe defaults, actual parameters, photos, rating/tasting/visibility and save flow are present.
+- [x] S21 Add Brew Log Mobile — mobile 6-step wizard covers recipe/coffee, actual data, tasting, photos, visibility and save flow.
+- [x] S22 Brew Log Detail — detail route, actual data, photo, tasting scores, comments and owner edit/delete actions are present.
+- [x] S23 Brew Logs History — brew logs route with timeline/cards and quick tabs is present.
+
+#### Sprint 5 — Coffees + Gear
+
+- [x] S24 Coffees Collection — collection route, status tabs/cards and add coffee entry point are present.
+- [x] S25 Add Coffee Desktop — coffee form, photo upload, origin/process/roast/flavor/rating/status/visibility and save flow are present.
+- [ ] partial S26 Add Coffee Mobile — responsive form exists, but the planned mobile wizard/camera flow is not confirmed.
+- [x] S27 Public Coffee Page — public coffee aggregation page, comments, public recipes and public brew logs are present.
+- [x] S28 Gear Library — gear route with categories/cards and add gear entry points is present.
+- [x] S29 Add Grinder Desktop — grinder form/catalog linking/default toggle/image upload/save flow are present.
+- [ ] partial S30 Add Grinder Mobile — responsive form exists, but the planned mobile wizard is not implemented.
+- [x] S31 Add Dripper Desktop/Mobile — dripper form, save flow and recipe-builder selection data are present.
+- [x] S32 Add Filter Desktop/Mobile — filter form, save flow and recipe-builder selection data are present.
+- [x] S33 Public Gear Page — public gear aggregation page, comments, public recipes and public brew logs are present.
+
+#### Sprint 6 — Social MVP
+
+- [x] S06 Social Home Feed — feed query, tabs, feed cards, right rail and visibility filtering are present.
+- [x] S07 Feed Card Component — feed card variants/actions and `Brew this` path are present.
+- [x] S08 Explore Main — recipe/people/coffee/gear/clubs search tabs and result grids are present.
+- [ ] partial S09 Filter Drawer — method/visibility filters exist, but the full planned filter drawer/bottom sheet and all filter dimensions are not implemented.
+- [x] S34 Follow System — follows table/actions/suggested people/count usage are present.
+- [x] S35 Reactions / Likes — reactions table/action/count handling and duplicate protection are present.
+- [x] S36 Saves / Bookmarks — saves table/action and saved recipes tab are present.
+- [x] S37 Comments — comments table, one-level replies, delete and report flows are present.
+- [x] S38 Notifications — notifications table, notification route, mark-read action and event creation hooks are present.
+- [x] S39 Reports / Moderation — reports table, report actions, admin queue and hide content action are present.
+
+#### Sprint 7 — Export + Landing
+
+- [ ] partial S01 Landing Page — landing UI, hero, CTAs, stats, feature sections and preview card exist; SEO/performance acceptance is not verified.
+- [x] S47 Export Studio Desktop — select/preview/customize controls, block toggles, theme controls and PNG export are present.
+- [ ] partial S48 Export Studio Mobile — responsive export UI exists, but the planned mobile wizard is not implemented.
+- [x] S49 Transparent PNG Output — transparent format mode and PNG export path are present.
+- [x] S50 Public Share Page — share route, recipe summary, CTA and OG metadata are present.
+
+#### Sprint 8 — Polish + Beta Prep
+
+- [x] S40 Collections List — collections table, list, public/private indicator and create form are present.
+- [x] S41 Collection Detail — collection detail, public share page, add/remove item flow and ordering data are present.
+- [x] S42 Clubs List / Community Home — community/clubs pages, suggested clubs, active challenges and join action are present.
+- [ ] partial S43 Club Detail — club page and join flow exist, but create post/membership-rule depth is not fully confirmed.
+- [ ] partial S44 Challenge Detail — challenge page and brew-log entry form exist, but leaderboard/full entries feed are not confirmed.
+- [x] S45 Messages List — conversations list and unread state are present.
+- [ ] partial S46 Conversation Detail — thread UI and send message route exist, but attach recipe/block/report flows are not implemented.
+- [x] S51 Settings — account/profile/privacy/units/export-oriented settings shell is present.
+- [x] S52 Privacy Settings — default visibility/comment/message/profile toggles and persistence are present.
+- [x] S53 Admin Moderation Dashboard — admin-gated moderation dashboard with reports/actions is present.
+
+#### Data Quality + Release
+
+- [x] P01 Seed Data — demo users, recipes, coffees, gear, feed/social data and seed/clear scripts are present.
+- [ ] partial P02 Works With My Setup — default gear fields exist in profile/settings area, but Explore compatibility ranking/filter is not confirmed.
+- [ ] partial P03 Recipe Stats Aggregation — stats fields and event updates exist, but a backfill job/complete aggregation pipeline is not confirmed.
+- [x] Q01 Unit tests — validators, permission helpers, recipe math, storage and timer unit tests are present.
+- [ ] partial Q02 E2E tests — Playwright smoke coverage exists for many flows, but the full listed E2E flow set is not complete.
+- [ ] Q03 Production readiness — env/storage/deploy/Sentry/analytics/security headers/rate limiting readiness is not fully confirmed.
+
 ---
 
 # EPIC A — Project Foundation
@@ -1473,45 +1569,45 @@ Acceptance:
 
 # Screen-by-screen checklist summary
 
-| ID | Screen | Desktop | Mobile | Priority |
-|---|---|---|---:|
-| S01 | Landing | yes | yes | P1 |
-| S02 | Auth | yes | yes | P1 |
-| S03 | Onboarding | yes | yes | P1 |
-| S04 | App Shell Desktop | yes | no | P0 |
-| S05 | App Shell Mobile | no | yes | P0 |
-| S06 | Social Home Feed | yes | yes | P1 |
-| S07 | Feed Card | yes | yes | P1 |
-| S08 | Explore | yes | yes | P1 |
-| S09 | Filters | yes | yes | P1 |
-| S10 | User Profile | yes | yes | P1 |
-| S11 | Edit Profile | yes | yes | P1 |
-| S12 | My Recipes | yes | yes | P1 |
-| S13 | Public Recipe Detail | yes | yes | P1 |
-| S14 | Owner Recipe Detail | yes | yes | P1 |
-| S15 | Add Recipe Desktop | yes | no | P1 |
-| S16 | Add Recipe Mobile | no | yes | P1 |
-| S18 | Brew Mode Desktop | yes | no | P1 |
-| S19 | Brew Mode Mobile | no | yes | P1 |
-| S20 | Add Brew Log Desktop | yes | no | P1 |
-| S21 | Add Brew Log Mobile | no | yes | P1 |
-| S22 | Brew Log Detail | yes | yes | P1 |
-| S23 | Brew Log History | yes | yes | P1 |
-| S24 | Coffees | yes | yes | P1 |
-| S25 | Add Coffee Desktop | yes | no | P1 |
-| S26 | Add Coffee Mobile | no | yes | P1 |
-| S28 | Gear Library | yes | yes | P1 |
-| S29 | Add Grinder Desktop | yes | no | P1 |
-| S30 | Add Grinder Mobile | no | yes | P1 |
-| S31 | Add Dripper | yes | yes | P1 |
-| S32 | Add Filter | yes | yes | P1 |
-| S33 | Public Gear Page | yes | yes | P2 |
-| S40 | Collections | yes | yes | P2 |
-| S42 | Clubs | yes | yes | P2 |
-| S44 | Challenges | yes | yes | P2 |
-| S45 | Messages | yes | yes | P2 |
-| S47 | Export Studio | yes | no | P1 |
-| S48 | Export Studio Mobile | no | yes | P1 |
-| S50 | Share Page | yes | yes | P1 |
-| S51 | Settings | yes | yes | P1 |
-| S53 | Admin Moderation | yes | optional | P2 |
+| ID  | Screen               | Desktop |   Mobile | Priority |
+| --- | -------------------- | ------- | -------: | -------- |
+| S01 | Landing              | yes     |      yes | P1       |
+| S02 | Auth                 | yes     |      yes | P1       |
+| S03 | Onboarding           | yes     |      yes | P1       |
+| S04 | App Shell Desktop    | yes     |       no | P0       |
+| S05 | App Shell Mobile     | no      |      yes | P0       |
+| S06 | Social Home Feed     | yes     |      yes | P1       |
+| S07 | Feed Card            | yes     |      yes | P1       |
+| S08 | Explore              | yes     |      yes | P1       |
+| S09 | Filters              | yes     |      yes | P1       |
+| S10 | User Profile         | yes     |      yes | P1       |
+| S11 | Edit Profile         | yes     |      yes | P1       |
+| S12 | My Recipes           | yes     |      yes | P1       |
+| S13 | Public Recipe Detail | yes     |      yes | P1       |
+| S14 | Owner Recipe Detail  | yes     |      yes | P1       |
+| S15 | Add Recipe Desktop   | yes     |       no | P1       |
+| S16 | Add Recipe Mobile    | no      |      yes | P1       |
+| S18 | Brew Mode Desktop    | yes     |       no | P1       |
+| S19 | Brew Mode Mobile     | no      |      yes | P1       |
+| S20 | Add Brew Log Desktop | yes     |       no | P1       |
+| S21 | Add Brew Log Mobile  | no      |      yes | P1       |
+| S22 | Brew Log Detail      | yes     |      yes | P1       |
+| S23 | Brew Log History     | yes     |      yes | P1       |
+| S24 | Coffees              | yes     |      yes | P1       |
+| S25 | Add Coffee Desktop   | yes     |       no | P1       |
+| S26 | Add Coffee Mobile    | no      |      yes | P1       |
+| S28 | Gear Library         | yes     |      yes | P1       |
+| S29 | Add Grinder Desktop  | yes     |       no | P1       |
+| S30 | Add Grinder Mobile   | no      |      yes | P1       |
+| S31 | Add Dripper          | yes     |      yes | P1       |
+| S32 | Add Filter           | yes     |      yes | P1       |
+| S33 | Public Gear Page     | yes     |      yes | P2       |
+| S40 | Collections          | yes     |      yes | P2       |
+| S42 | Clubs                | yes     |      yes | P2       |
+| S44 | Challenges           | yes     |      yes | P2       |
+| S45 | Messages             | yes     |      yes | P2       |
+| S47 | Export Studio        | yes     |       no | P1       |
+| S48 | Export Studio Mobile | no      |      yes | P1       |
+| S50 | Share Page           | yes     |      yes | P1       |
+| S51 | Settings             | yes     |      yes | P1       |
+| S53 | Admin Moderation     | yes     | optional | P2       |

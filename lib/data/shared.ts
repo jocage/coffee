@@ -11,11 +11,7 @@ import { challenges as challengesTable, clubs as clubsTable } from "@/db/schema/
 import { dripperCatalogItems, gearItems, grinderCatalogItems } from "@/db/schema/gear";
 import { profiles } from "@/db/schema/profiles";
 import { recipeSteps, recipes as recipesTable } from "@/db/schema/recipes";
-import {
-  comments,
-  contentReports,
-  notifications as notificationsTable
-} from "@/db/schema/social";
+import { comments, contentReports, notifications as notificationsTable } from "@/db/schema/social";
 import {
   challenges as seedChallenges,
   clubs as seedClubs,
@@ -902,6 +898,7 @@ export function mapBrewLog(
     "slug" in coffee && "imageUrl" in coffee
       ? (coffee as CoffeeBean)
       : mapCoffee(coffee as DbCoffee);
+  const photos = row.photos.length > 0 ? row.photos : [recipe?.coverUrl ?? mappedCoffee.imageUrl];
 
   return {
     id: row.id,
@@ -922,7 +919,7 @@ export function mapBrewLog(
     tastingNotes: row.tastingNotes,
     flavorTags: row.flavorTags,
     visibility: row.visibility,
-    photos: [recipe?.coverUrl ?? mappedCoffee.imageUrl]
+    photos
   };
 }
 

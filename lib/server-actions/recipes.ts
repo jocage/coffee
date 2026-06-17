@@ -7,7 +7,7 @@ import { formDataToObject } from "@/lib/server-actions/result";
 import { createRecipeInDb, createRecipeRemixInDb, deleteRecipeInDb, updateRecipeInDb } from "@/lib/data/repositories";
 
 export async function saveRecipeAction(formData: FormData): Promise<void> {
-  const raw = formDataToObject(formData);
+  const raw = normalizeDraftRecipeInput(formDataToObject(formData));
   const parsed = recipeInputSchema.safeParse({
     ...raw,
     steps: recipeStepsFromFormData(formData, Number(raw.waterGrams ?? 0))
@@ -29,7 +29,7 @@ export async function saveRecipeAction(formData: FormData): Promise<void> {
 }
 
 export async function updateRecipeAction(formData: FormData): Promise<void> {
-  const raw = formDataToObject(formData);
+  const raw = normalizeDraftRecipeInput(formDataToObject(formData));
   const id = String(raw.id ?? "");
   const parsed = recipeInputSchema.safeParse({
     ...raw,
@@ -95,4 +95,25 @@ function recipeStepsFromFormData(formData: FormData, waterGrams: number) {
     cumulativeWaterGrams: Number(cumulative[index] ?? waterGrams),
     instruction: String(instructions[index] ?? "Pour gently")
   }));
+}
+
+function normalizeDraftRecipeInput(raw: Record<string, FormDataEntryValue>) {
+  if (raw.intent !== "draft") {
+    return raw;
+  }
+
+  return {
+    ...raw,
+    title: nonEmpty(raw.title) ? raw.title : "Untitled recipe",
+    method: nonEmpty(raw.method) ? raw.method : "V60",
+    visibility: nonEmpty(raw.visibility) ? raw.visibility : "private",
+    doseGrams: nonEmpty(raw.doseGrams) ? raw.doseGrams : "20",
+    waterGrams: nonEmpty(raw.waterGrams) ? raw.waterGrams : "300",
+    temperatureCelsius: nonEmpty(raw.temperatureCelsius) ? raw.temperatureCelsius : "93",
+    grindLabel: nonEmpty(raw.grindLabel) ? raw.grindLabel : "Medium-fine"
+  };
+}
+
+function nonEmpty(value: FormDataEntryValue | undefined) {
+  return typeof value === "string" ? value.trim().length > 0 : Boolean(value);
 }

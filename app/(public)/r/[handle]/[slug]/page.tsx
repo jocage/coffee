@@ -7,6 +7,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
+import { RecipeRemixDiff } from "@/components/coffee/recipe-remix-diff";
 import { StepTable } from "@/components/coffee/step-table";
 import { TasteRadar } from "@/components/coffee/taste-radar";
 import { AddToCollectionForm } from "@/components/social/add-to-collection-form";
@@ -15,6 +16,7 @@ import { ReportForm } from "@/components/social/report-form";
 import {
   getCollections,
   getCommentsForTarget,
+  getRecipeById,
   getPublicRecipe,
   getSocialCountsForTarget
 } from "@/lib/data/queries";
@@ -52,10 +54,11 @@ export default async function PublicRecipePage({ params }: { params: Promise<Par
   }
 
   const path = `/r/${recipe.author.handle}/${recipe.slug}`;
-  const [comments, socialCounts, collections] = await Promise.all([
+  const [comments, socialCounts, collections, originalRecipe] = await Promise.all([
     getCommentsForTarget({ targetType: "recipe", targetId: recipe.id }),
     getSocialCountsForTarget({ targetType: "recipe", targetId: recipe.id }),
-    getCollections()
+    getCollections(),
+    recipe.parentRecipeId ? getRecipeById(recipe.parentRecipeId) : Promise.resolve(null)
   ]);
 
   return (
@@ -97,6 +100,8 @@ export default async function PublicRecipePage({ params }: { params: Promise<Par
             </div>
           </div>
         </Card>
+
+        {originalRecipe ? <RecipeRemixDiff remix={recipe} original={originalRecipe} /> : null}
 
         <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
           <Card>

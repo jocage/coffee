@@ -27,8 +27,17 @@ test("auth screens render actionable forms", async ({ page }) => {
 test("onboarding renders profile setup controls", async ({ page }) => {
   await page.goto("/onboarding");
   await expect(page.getByRole("heading", { name: "Set up your coffee profile" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Welcome" })).toHaveAttribute(
+    "aria-current",
+    "step"
+  );
+  await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByLabel("Display name")).toBeVisible();
   await expect(page.getByLabel("Choose handle")).toBeVisible();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByRole("heading", { name: "Favorite methods" })).toBeVisible();
+  await page.getByRole("button", { name: "Community" }).click();
+  await expect(page.getByRole("heading", { name: "Suggested follows and clubs" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Finish setup" })).toBeVisible();
 });
 
@@ -92,17 +101,26 @@ test("recipe form persists multiple ordered brew steps", async ({ page }) => {
   const title = `Playwright V60 ${Date.now()}`;
 
   await page.goto("/recipes/new");
-  await page.getByLabel("Recipe name").fill(title);
-  await page.getByRole("button", { name: "Add step" }).click();
-  await page.locator('input[name="stepLabel"]').nth(1).fill("Pour 2");
-  await page.locator('input[name="stepStartsAtSeconds"]').nth(1).fill("45");
-  await page.locator('input[name="stepPourGrams"]').nth(1).fill("80");
-  await page.locator('input[name="stepCumulativeWaterGrams"]').nth(1).fill("120");
-  await page.locator('textarea[name="stepInstruction"]').nth(1).fill("Second steady pour");
+  const isMobileWizard = await page.locator("#mobile-title").isVisible();
+  const recipeForm = page
+    .locator("form")
+    .filter({ has: page.locator(isMobileWizard ? "#mobile-title" : "#title") });
+  await recipeForm.getByLabel("Recipe name").fill(title);
+  if (await page.getByRole("button", { name: "Steps" }).isVisible()) {
+    await page.getByRole("button", { name: "Steps" }).click();
+  }
+  await recipeForm.getByRole("button", { name: "Add step" }).click();
+  await recipeForm.locator('input[name="stepLabel"]').nth(1).fill("Pour 2");
+  await recipeForm.locator('input[name="stepStartsAtSeconds"]').nth(1).fill("45");
+  await recipeForm.locator('input[name="stepPourGrams"]').nth(1).fill("80");
+  await recipeForm.locator('input[name="stepCumulativeWaterGrams"]').nth(1).fill("120");
+  await recipeForm.locator('textarea[name="stepInstruction"]').nth(1).fill("Second steady pour");
 
   await Promise.all([
-    page.waitForURL((url) => url.pathname.startsWith("/recipes/") && url.pathname !== "/recipes/new"),
-    page.getByRole("button", { name: "Save draft" }).click()
+    page.waitForURL(
+      (url) => url.pathname.startsWith("/recipes/") && url.pathname !== "/recipes/new"
+    ),
+    recipeForm.getByRole("button", { name: "Save draft" }).click()
   ]);
 
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
@@ -110,19 +128,38 @@ test("recipe form persists multiple ordered brew steps", async ({ page }) => {
   await expect(page.getByText("Second steady pour")).toBeVisible();
 });
 
-test("brew log form persists a new brew", async ({ page }) => {
+test("brew log form persists a new brew", async ({ page }, testInfo) => {
   const grind = `PW espresso ${Date.now()}`;
 
   await page.goto("/brews/new");
-  await page.getByLabel("Recipe", { exact: true }).selectOption("");
-  await page.getByLabel("Brew method").selectOption("Espresso");
-  await page.getByLabel("Dose (g)").fill("18");
-  await page.getByLabel("Water in / total water (g)").fill("38");
-  await page.getByLabel("Beverage yield (g)").fill("36");
-  await page.getByLabel("Brew time (s)").fill("29");
-  await page.getByLabel("Pressure (bar)").fill("9");
-  await page.getByLabel("Grind setting").fill(grind);
-  await page.getByLabel("Notes").fill("Playwright espresso brew log entry");
+
+  if (testInfo.project.name.includes("mobile")) {
+    await page.getByLabel("Recipe source").selectOption("");
+    await page.getByLabel("Method", { exact: true }).selectOption("Espresso");
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByLabel("Dose grams").fill("18");
+    await page.getByLabel("Water grams").fill("38");
+    await page.getByLabel("Yield grams").fill("36");
+    await page.getByLabel("Time seconds").fill("29");
+    await page.getByLabel("Pressure bars").fill("9");
+    await page.getByLabel("Grind notes").fill(grind);
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByLabel("Tasting notes").fill("Playwright espresso brew log entry");
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
+  } else {
+    await page.getByLabel("Recipe", { exact: true }).selectOption("");
+    await page.getByLabel("Brew method").selectOption("Espresso");
+    await page.getByLabel("Dose (g)").fill("18");
+    await page.getByLabel("Water in / total water (g)").fill("38");
+    await page.getByLabel("Beverage yield (g)").fill("36");
+    await page.getByLabel("Brew time (s)").fill("29");
+    await page.getByLabel("Pressure (bar)").fill("9");
+    await page.getByLabel("Grind setting").fill(grind);
+    await page.getByLabel("Notes", { exact: true }).fill("Playwright espresso brew log entry");
+  }
+
   await Promise.all([
     page.waitForURL("**/brews"),
     page.getByRole("button", { name: "Save Brew Log" }).click()
@@ -131,7 +168,7 @@ test("brew log form persists a new brew", async ({ page }) => {
   await expect(page.getByText("Espresso").first()).toBeVisible();
   await expect(page.getByText("Espresso with").first()).toBeVisible();
   await expect(page.getByText("36g out").first()).toBeVisible();
-  await expect(page.getByText(grind)).toBeVisible();
+  await expect(page.getByText(grind).first()).toBeVisible();
 });
 
 test("brew log detail renders actual brew data", async ({ page }) => {
@@ -144,7 +181,7 @@ test("brew log detail renders actual brew data", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Post comment" })).toBeVisible();
 });
 
-test("live brew mode controls timer flow", async ({ page }) => {
+test("live brew mode controls timer flow", async ({ page }, testInfo) => {
   await page.goto("/brew/recipe_morning_v60");
   await expect(page.getByRole("heading", { name: "Morning Clarity with V60" })).toBeVisible();
   await page.getByRole("button", { name: "Pause" }).click();
@@ -156,7 +193,11 @@ test("live brew mode controls timer flow", async ({ page }) => {
     page.waitForURL("**/brews/new?recipeId=recipe_morning_v60"),
     page.getByRole("link", { name: "End brew" }).click()
   ]);
-  await expect(page.getByLabel("Recipe", { exact: true })).toHaveValue("recipe_morning_v60");
+  await expect(
+    page.getByLabel(testInfo.project.name.includes("mobile") ? "Recipe source" : "Recipe", {
+      exact: true
+    })
+  ).toHaveValue("recipe_morning_v60");
 });
 
 test("dripper and filter forms persist new gear", async ({ page }) => {
@@ -294,13 +335,23 @@ test("recipe comments persist and render", async ({ page }) => {
   await expect(page.getByText(deleteBody)).toBeVisible();
   await Promise.all([
     page.waitForURL("**/r/tetsu/morning-clarity-v60?commentDeleted=1"),
-    page.locator("article").filter({ hasText: deleteBody }).getByRole("button", { name: "Delete" }).first().click()
+    page
+      .locator("article")
+      .filter({ hasText: deleteBody })
+      .getByRole("button", { name: "Delete" })
+      .first()
+      .click()
   ]);
   await expect(page.getByText(deleteBody)).toBeHidden();
 
   await Promise.all([
     page.waitForURL("**/r/tetsu/morning-clarity-v60?reported=1"),
-    page.locator("article").filter({ hasText: body }).getByRole("button", { name: "Report comment" }).first().click()
+    page
+      .locator("article")
+      .filter({ hasText: body })
+      .getByRole("button", { name: "Report comment" })
+      .first()
+      .click()
   ]);
   await page.goto("/admin/moderation");
   await expect(page.getByText(`Reported comment: ${body}`)).toBeVisible();
@@ -325,8 +376,15 @@ test("public recipe can be remixed into an editable draft", async ({ page }) => 
     page.getByRole("button", { name: "Remix" }).click()
   ]);
 
-  await expect(page.getByRole("heading", { name: "Remix of Morning Clarity with V60" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Remix of Morning Clarity with V60" })
+  ).toBeVisible();
   await expect(page.getByText("Remix draft based on")).toBeVisible();
+  const remixDiff = page
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { name: "Remix diff" }) });
+  await expect(remixDiff).toBeVisible();
+  await expect(remixDiff.getByText("Based on Morning Clarity with V60")).toBeVisible();
   await expect(page.getByRole("button", { name: "Update recipe" })).toBeVisible();
 });
 

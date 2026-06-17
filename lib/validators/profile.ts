@@ -47,5 +47,7 @@ export const onboardingInputSchema = profileInputSchema.extend({
   firstCoffeeRoaster: z.string().trim().max(120).optional(),
   firstGearName: z.string().trim().max(120).optional(),
   firstGearBrand: z.string().trim().max(120).optional(),
-  firstGearModel: z.string().trim().max(120).optional()
+  firstGearModel: z.string().trim().max(120).optional(),
+  suggestedFollowIds: z.array(z.string().trim().min(1)).default([]),
+  suggestedClubIds: z.array(z.string().trim().min(1)).default([])
 });
