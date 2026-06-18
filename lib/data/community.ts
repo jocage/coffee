@@ -1,16 +1,23 @@
 import "server-only";
 
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { collectionItems, collections as collectionsTable } from "@/db/schema/collections";
 import {
   challengeEntries,
   challenges as challengesTable,
-  clubMembers
+  clubs as clubsTable,
+  clubMembers,
+  clubPosts
 } from "@/db/schema/clubs";
 import { profiles } from "@/db/schema/profiles";
-import { challenges as seedChallenges, clubs as seedClubs } from "@/lib/data/seed";
-import type { Challenge, Club, Collection, Visibility } from "@/lib/domain";
+import {
+  challenges as seedChallenges,
+  clubs as seedClubs,
+  creators as seedCreators,
+  recipes as seedRecipes
+} from "@/lib/data/seed";
+import type { Challenge, Club, ClubDetail, ClubPost, Collection, Recipe, Visibility } from "@/lib/domain";
 import {
   createNotificationInDb,
   ensureCurrentIdentity,
@@ -26,6 +33,7 @@ import { getBrewLogsFromDb, getRecipesFromDb } from "@/lib/data/recipes";
 
 type DbCollection = typeof collectionsTable.$inferSelect;
 type DbProfile = typeof profiles.$inferSelect;
+type DbClubPost = typeof clubPosts.$inferSelect;
 
 async function mapCollectionWithItems(row: DbCollection, owner: DbProfile): Promise<Collection> {
   const rows = await db.query.collectionItems.findMany({
@@ -217,6 +225,76 @@ export async function getClubBySlugFromDb(slug: string): Promise<Club | null> {
   return clubs.find((club) => club.slug === slug) ?? null;
 }
 
+export async function getClubDetailBySlugFromDb(slug: string): Promise<ClubDetail | null> {
+  return withSeedFallback(async () => {
+    const viewerId = await ensureCurrentIdentity();
+    const clubRow = await db.query.clubs.findFirst({
+      where: eq(clubsTable.slug, slug)
+    });
+
+    if (!clubRow) {
+      return null;
+    }
+
+    const [memberRows, challengesRows] = await Promise.all([
+      db.query.clubMembers.findMany({
+        where: eq(clubMembers.clubId, clubRow.id)
+      }),
+      db.query.challenges.findMany({
+        where: eq(challengesTable.clubId, clubRow.id),
+        orderBy: (table, { desc }) => [desc(table.startsAt)]
+      })
+    ]);
+    const isMember = memberRows.some((member) => member.userId === viewerId);
+    const club = mapClub(clubRow, memberRows.length, challengesRows[0]?.id);
+    const canReadContent = canReadClubContent(club, isMember);
+
+    if (!canReadContent) {
+      return {
+        club,
+        isMember,
+        canReadContent,
+        canPost: false,
+        posts: [],
+        pinnedRecipes: [],
+        members: [],
+        challenges: []
+      };
+    }
+
+    const memberIds = memberRows.map((member) => member.userId);
+    const [memberProfiles, recipes, postRows] = await Promise.all([
+      memberIds.length > 0
+        ? db.query.profiles.findMany({
+            where: inArray(profiles.userId, memberIds)
+          })
+        : [],
+      getRecipesFromDb({ visibility: "public" }),
+      db
+        .select({
+          post: clubPosts,
+          author: profiles
+        })
+        .from(clubPosts)
+        .innerJoin(profiles, eq(clubPosts.authorId, profiles.userId))
+        .where(eq(clubPosts.clubId, clubRow.id))
+        .orderBy(desc(clubPosts.createdAt))
+    ]);
+    const recipesById = new Map(recipes.map((recipe) => [recipe.id, recipe]));
+
+    return {
+      club,
+      isMember,
+      canReadContent,
+      canPost: isMember,
+      posts: postRows.map((row) => mapClubPost(row.post, row.author, recipesById)),
+      pinnedRecipes: recipes.slice(0, 3),
+      members: memberProfiles.map(mapProfile),
+      challenges: challengesRows.map((challenge) => mapChallenge(challenge, club.slug))
+    };
+  }, buildSeedClubDetail(slug));
+}
+
 export async function joinClubInDb(clubId: string) {
   const viewerId = await ensureCurrentIdentity();
   await db
@@ -235,6 +313,49 @@ export async function joinClubInDb(clubId: string) {
     body: "You joined a coffee club.",
     href: "/community"
   });
+}
+
+export async function createClubPostInDb(input: {
+  clubId: string;
+  body: string;
+  pinnedRecipeId?: string;
+  path: string;
+}) {
+  const viewerId = await ensureCurrentIdentity();
+  const club = await db.query.clubs.findFirst({
+    where: eq(clubsTable.id, input.clubId)
+  });
+
+  if (!club) {
+    throw new Error("Club not found");
+  }
+
+  const membership = await db.query.clubMembers.findFirst({
+    where: and(eq(clubMembers.clubId, input.clubId), eq(clubMembers.userId, viewerId))
+  });
+
+  if (!membership) {
+    throw new Error("Join the club before posting");
+  }
+
+  const id = crypto.randomUUID();
+  await db.insert(clubPosts).values({
+    id,
+    clubId: input.clubId,
+    authorId: viewerId,
+    body: input.body,
+    pinnedRecipeId: input.pinnedRecipeId
+  });
+
+  await createNotificationInDb({
+    userId: viewerId,
+    type: "system",
+    title: "Club post published",
+    body: "Your club post is live.",
+    href: input.path
+  });
+
+  return id;
 }
 
 export async function getChallengesFromDb(): Promise<Challenge[]> {
@@ -257,6 +378,61 @@ export async function getChallengesFromDb(): Promise<Challenge[]> {
 export async function getChallengeByIdFromDb(id: string): Promise<Challenge | null> {
   const challenges = await getChallengesFromDb();
   return challenges.find((challenge) => challenge.id === id) ?? null;
+}
+
+function canReadClubContent(club: Club, isMember: boolean) {
+  return club.visibility === "public" || isMember;
+}
+
+function mapClubPost(
+  row: DbClubPost,
+  author: DbProfile,
+  recipesById: Map<string, Recipe>
+): ClubPost {
+  const pinnedRecipe = row.pinnedRecipeId ? recipesById.get(row.pinnedRecipeId) : undefined;
+
+  return {
+    id: row.id,
+    clubId: row.clubId,
+    author: mapProfile(author),
+    body: row.body,
+    pinnedRecipe,
+    createdAt: row.createdAt.toISOString()
+  };
+}
+
+function buildSeedClubDetail(slug: string): ClubDetail | null {
+  const club = seedClubs.find((item) => item.slug === slug);
+
+  if (!club) {
+    return null;
+  }
+
+  const challenges = seedChallenges.filter((challenge) => challenge.clubSlug === club.slug);
+  const pinnedRecipes = seedRecipes.slice(0, 2);
+
+  return {
+    club,
+    isMember: false,
+    canReadContent: club.visibility === "public",
+    canPost: false,
+    posts:
+      club.visibility === "public"
+        ? [
+            {
+              id: `${club.id}_seed_post`,
+              clubId: club.id,
+              author: seedCreators[1] ?? seedCreators[0],
+              body: "What changed your cup most this week? Members are comparing bloom agitation, temperature drops and grinder settings.",
+              pinnedRecipe: pinnedRecipes[0],
+              createdAt: "2026-06-10T12:00:00.000Z"
+            }
+          ]
+        : [],
+    pinnedRecipes: club.visibility === "public" ? pinnedRecipes : [],
+    members: club.visibility === "public" ? seedCreators : [],
+    challenges: club.visibility === "public" ? challenges : []
+  };
 }
 
 export async function enterChallengeInDb(input: {

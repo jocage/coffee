@@ -242,6 +242,26 @@ export type Club = {
   activeChallengeId?: string;
 };
 
+export type ClubPost = {
+  id: string;
+  clubId: string;
+  author: UserProfile;
+  body: string;
+  pinnedRecipe?: Recipe;
+  createdAt: string;
+};
+
+export type ClubDetail = {
+  club: Club;
+  isMember: boolean;
+  canReadContent: boolean;
+  canPost: boolean;
+  posts: ClubPost[];
+  pinnedRecipes: Recipe[];
+  members: UserProfile[];
+  challenges: Challenge[];
+};
+
 export type Challenge = {
   id: string;
   title: string;

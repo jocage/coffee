@@ -85,6 +85,13 @@
       "when": 1781726249744,
       "tag": "0011_dashing_talisman",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1781794835339,
+      "tag": "0012_goofy_lifeguard",
+      "breakpoints": true
     }
   ]
 }

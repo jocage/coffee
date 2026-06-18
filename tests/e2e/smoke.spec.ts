@@ -499,8 +499,20 @@ test("community, messages and notifications routes render", async ({ page }) => 
 
 test("community actions submit successfully", async ({ page }) => {
   await page.goto("/clubs/pourover-lab");
-  await page.getByRole("button", { name: "Join club" }).click();
+  const joinButton = page.getByRole("button", { name: "Join club" });
+  if (await joinButton.isVisible()) {
+    await joinButton.click();
+  }
   await expect(page.getByRole("heading", { name: "Pour-over Lab" })).toBeVisible();
+  await expect(page.getByLabel("Club post")).toBeVisible();
+
+  const postBody = `Playwright club post ${Date.now()}`;
+  await page.getByLabel("Club post").fill(postBody);
+  await Promise.all([
+    page.waitForURL("**/clubs/pourover-lab?posted=1"),
+    page.getByRole("button", { name: "Post" }).click()
+  ]);
+  await expect(page.getByText(postBody)).toBeVisible();
 
   await page.goto("/challenges/challenge_bloom");
   await page.getByLabel("Entry notes").fill("Playwright challenge entry");

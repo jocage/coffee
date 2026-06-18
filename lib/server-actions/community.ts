@@ -2,9 +2,20 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { enterChallengeInDb, joinClubInDb, markNotificationsReadInDb, sendMessageInDb } from "@/lib/data/repositories";
+import {
+  createClubPostInDb,
+  enterChallengeInDb,
+  joinClubInDb,
+  markNotificationsReadInDb,
+  sendMessageInDb
+} from "@/lib/data/repositories";
 import { formDataToObject } from "@/lib/server-actions/result";
-import { challengeEntryInputSchema, joinClubInputSchema, sendMessageInputSchema } from "@/lib/validators/community";
+import {
+  challengeEntryInputSchema,
+  createClubPostInputSchema,
+  joinClubInputSchema,
+  sendMessageInputSchema
+} from "@/lib/validators/community";
 
 export async function joinClubAction(formData: FormData): Promise<void> {
   const parsed = joinClubInputSchema.safeParse(formDataToObject(formData));
@@ -13,6 +24,15 @@ export async function joinClubAction(formData: FormData): Promise<void> {
   await joinClubInDb(parsed.data.clubId);
   revalidatePath("/community");
   revalidatePath(parsed.data.path);
+}
+
+export async function createClubPostAction(formData: FormData): Promise<void> {
+  const parsed = createClubPostInputSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success) throw new Error("Club post could not be created");
+
+  await createClubPostInDb(parsed.data);
+  revalidatePath(parsed.data.path);
+  redirect(withSearchParam(parsed.data.path, "posted", "1"));
 }
 
 export async function enterChallengeAction(formData: FormData): Promise<void> {

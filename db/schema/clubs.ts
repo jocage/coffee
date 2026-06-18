@@ -2,6 +2,7 @@ import { integer, pgEnum, pgTable, primaryKey, text, timestamp } from "drizzle-o
 import { user } from "@/db/schema/auth";
 import { brewLogs } from "@/db/schema/brews";
 import { visibilityEnum } from "@/db/schema/profiles";
+import { recipes } from "@/db/schema/recipes";
 
 export const clubs = pgTable("clubs", {
   id: text("id").primaryKey(),
@@ -26,6 +27,15 @@ export const clubMembers = pgTable(
     pk: primaryKey({ columns: [table.clubId, table.userId] })
   })
 );
+
+export const clubPosts = pgTable("club_posts", {
+  id: text("id").primaryKey(),
+  clubId: text("club_id").notNull().references(() => clubs.id, { onDelete: "cascade" }),
+  authorId: text("author_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  body: text("body").notNull(),
+  pinnedRecipeId: text("pinned_recipe_id").references(() => recipes.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+});
 
 export const challenges = pgTable("challenges", {
   id: text("id").primaryKey(),
