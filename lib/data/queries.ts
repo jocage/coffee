@@ -101,9 +101,90 @@ export async function searchRecipes(filters: {
   query?: string;
   method?: BrewMethod;
   visibility?: Visibility | "all";
+  doseMin?: number;
+  doseMax?: number;
+  waterMin?: number;
+  waterMax?: number;
+  ratioMin?: number;
+  ratioMax?: number;
+  temperatureMin?: number;
+  temperatureMax?: number;
+  timeMax?: number;
+  grinder?: string;
+  dripper?: string;
+  roastLevel?: string;
+  process?: string;
+  flavor?: string;
+  difficulty?: Recipe["difficulty"] | "all";
+  worksWithSetup?: boolean;
 }) {
   noStore();
-  return getRecipesFromDb(filters);
+  const recipes = await getRecipesFromDb({
+    method: filters.method,
+    visibility: filters.visibility
+  });
+
+  return recipes.filter((recipe) => {
+    const queryMatches = filters.query
+      ? [
+          recipe.title,
+          recipe.subtitle,
+          recipe.description,
+          recipe.author.displayName,
+          recipe.author.handle,
+          recipe.coffee.name,
+          recipe.coffee.roaster,
+          recipe.coffee.origin,
+          recipe.coffee.process,
+          recipe.flavorNotes.join(" "),
+          recipe.gear.map((item) => `${item.brand} ${item.model} ${item.name}`).join(" ")
+        ].some((value) => value.toLowerCase().includes(filters.query?.toLowerCase() ?? ""))
+      : true;
+    const flavorMatches = filters.flavor
+      ? recipe.flavorNotes.join(" ").toLowerCase().includes(filters.flavor.toLowerCase())
+      : true;
+    const grinderMatches =
+      filters.grinder && filters.grinder !== "all"
+        ? recipe.gear.some(
+            (item) => item.type === "grinder" && gearMatchesFilter(item, filters.grinder ?? "")
+          )
+        : true;
+    const dripperMatches =
+      filters.dripper && filters.dripper !== "all"
+        ? recipe.gear.some(
+            (item) => item.type === "dripper" && gearMatchesFilter(item, filters.dripper ?? "")
+          )
+        : true;
+    const setupMatches = filters.worksWithSetup
+      ? recipe.gear.some((item) => item.defaultForMethod === recipe.method)
+      : true;
+
+    return (
+      queryMatches &&
+      flavorMatches &&
+      numberAtLeast(recipe.doseGrams, filters.doseMin) &&
+      numberAtMost(recipe.doseGrams, filters.doseMax) &&
+      numberAtLeast(recipe.waterGrams, filters.waterMin) &&
+      numberAtMost(recipe.waterGrams, filters.waterMax) &&
+      numberAtLeast(recipe.ratio, filters.ratioMin) &&
+      numberAtMost(recipe.ratio, filters.ratioMax) &&
+      numberAtLeast(recipe.temperatureCelsius, filters.temperatureMin) &&
+      numberAtMost(recipe.temperatureCelsius, filters.temperatureMax) &&
+      numberAtMost(recipe.totalTimeSeconds, filters.timeMax) &&
+      (!filters.roastLevel ||
+        filters.roastLevel === "all" ||
+        recipe.coffee.roastLevel === filters.roastLevel) &&
+      (!filters.process ||
+        filters.process === "all" ||
+        recipe.coffee.process.toLowerCase() === filters.process.toLowerCase()) &&
+      (!filters.difficulty ||
+        filters.difficulty === "all" ||
+        recipe.difficulty === filters.difficulty) &&
+      grinderMatches &&
+      dripperMatches &&
+      setupMatches
+    );
+  });
 }
 
 export async function getMyRecipes(filters?: { query?: string; visibility?: Visibility | "all" }) {
@@ -178,8 +259,12 @@ export async function getProfileContent(handle?: string) {
   const [recipes, brewLogs, gear, coffees] = await Promise.all([
     getRecipesFromDb({ ownerId: profile.id }),
     getBrewLogsFromDb({ ownerId: profile.id }),
-    profile.showGearOnProfile || isOwnProfile ? getGearFromDb({ ownerId: profile.id }) : Promise.resolve([]),
-    profile.showCoffeeOnProfile || isOwnProfile ? getCoffeesFromDb({ ownerId: profile.id }) : Promise.resolve([])
+    profile.showGearOnProfile || isOwnProfile
+      ? getGearFromDb({ ownerId: profile.id })
+      : Promise.resolve([]),
+    profile.showCoffeeOnProfile || isOwnProfile
+      ? getCoffeesFromDb({ ownerId: profile.id })
+      : Promise.resolve([])
   ]);
 
   return {
@@ -396,6 +481,22 @@ function getItemPopularity(item: FeedItem): number {
   }
 
   return item.brewLog.rating * 100 + item.brewLog.flavorTags.length * 10;
+}
+
+function numberAtLeast(value: number, minimum?: number): boolean {
+  return minimum === undefined || value >= minimum;
+}
+
+function numberAtMost(value: number, maximum?: number): boolean {
+  return maximum === undefined || value <= maximum;
+}
+
+function gearMatchesFilter(item: GearItem, filter: string): boolean {
+  return (
+    item.id === filter ||
+    slugifyGear(item) === filter ||
+    item.name.toLowerCase() === filter.toLowerCase()
+  );
 }
 
 function slugifyGear(item: GearItem) {

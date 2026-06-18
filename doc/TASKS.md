@@ -86,7 +86,7 @@ Rule: `[x]` means there is concrete implementation evidence in the repo. `[ ] pa
 - [x] S06 Social Home Feed — feed query, tabs, feed cards, right rail and visibility filtering are present.
 - [x] S07 Feed Card Component — feed card variants/actions and `Brew this` path are present.
 - [x] S08 Explore Main — recipe/people/coffee/gear/clubs search tabs and result grids are present.
-- [ ] partial S09 Filter Drawer — method/visibility filters exist, but the full planned filter drawer/bottom sheet and all filter dimensions are not implemented.
+- [x] S09 Filter Drawer — desktop sidebar and mobile bottom sheet support method, recipe metrics, gear, coffee, flavor, difficulty and setup filters via URL params.
 - [x] S34 Follow System — follows table/actions/suggested people/count usage are present.
 - [x] S35 Reactions / Likes — reactions table/action/count handling and duplicate protection are present.
 - [x] S36 Saves / Bookmarks — saves table/action and saved recipes tab are present.

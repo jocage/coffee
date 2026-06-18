@@ -350,6 +350,34 @@ test("explore renders non-recipe categories", async ({ page }) => {
   await expect(page.getByText("Pour-over Lab")).toBeVisible();
 });
 
+test("explore filters combine on desktop and mobile", async ({ page }, testInfo) => {
+  await page.goto("/explore");
+
+  if (testInfo.project.name.includes("mobile")) {
+    await page.getByRole("button", { name: "Filters" }).click();
+    const dialog = page.getByRole("dialog", { name: "Explore filters" });
+    await dialog.getByLabel("Method", { exact: true }).selectOption("AeroPress");
+    await dialog.getByLabel("Roast", { exact: true }).selectOption("medium-light");
+    await dialog.getByLabel("Max brew time").fill("180");
+    await Promise.all([
+      page.waitForURL(/method=AeroPress/),
+      dialog.getByRole("button", { name: "Apply filters" }).click()
+    ]);
+  } else {
+    const filters = page.locator("aside");
+    await filters.getByLabel("Method", { exact: true }).selectOption("AeroPress");
+    await filters.getByLabel("Roast", { exact: true }).selectOption("medium-light");
+    await filters.getByLabel("Max brew time").fill("180");
+    await Promise.all([
+      page.waitForURL(/method=AeroPress/),
+      filters.getByRole("button", { name: "Apply filters" }).click()
+    ]);
+  }
+
+  await expect(page.getByRole("heading", { name: "Travel AeroPress" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Morning Clarity with V60" })).toBeHidden();
+});
+
 test("recipe comments persist and render", async ({ page }) => {
   test.setTimeout(60_000);
 
