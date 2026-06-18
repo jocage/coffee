@@ -96,7 +96,7 @@ Rule: `[x]` means there is concrete implementation evidence in the repo. `[ ] pa
 
 #### Sprint 7 — Export + Landing
 
-- [ ] partial S01 Landing Page — landing UI, hero, CTAs, stats, feature sections and preview card exist; SEO/performance acceptance is not verified.
+- [x] S01 Landing Page — landing UI, hero, CTAs, stats, feature sections, preview card, route metadata and static landing build are present; CTA routes to sign up.
 - [x] S47 Export Studio Desktop — select/preview/customize controls, block toggles, theme controls and PNG export are present.
 - [ ] partial S48 Export Studio Mobile — responsive export UI exists, but the planned mobile wizard is not implemented.
 - [x] S49 Transparent PNG Output — transparent format mode and PNG export path are present.

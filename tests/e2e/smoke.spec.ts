@@ -3,7 +3,10 @@ import { expect, test } from "@playwright/test";
 test("landing page renders primary CTAs", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: /Brew better/i })).toBeVisible();
-  await expect(page.getByRole("link", { name: /Join Coffee Journey/i })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Join Coffee Journey/i })).toHaveAttribute(
+    "href",
+    "/sign-up"
+  );
 });
 
 test("home app shell renders dashboard", async ({ page }) => {

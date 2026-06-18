@@ -1,14 +1,37 @@
 import { ArrowRight, BookOpen, Coffee, Compass, Download, Timer } from "lucide-react";
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { CoffeeLogo } from "@/components/coffee/logo";
 import { RecipeCard } from "@/components/coffee/recipe-card";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { getPreviewRecipe } from "@/lib/data/queries";
+import { images } from "@/lib/data/images";
+import { recipes as seedRecipes } from "@/lib/data/seed";
 
-export default async function LandingPage() {
-  const featuredRecipe = await getPreviewRecipe();
+export const metadata: Metadata = {
+  title: "Coffee Journey | Brew better. Share more. Connect.",
+  description:
+    "A social brewing journal for tracking cups, publishing recipes, repeating brew methods, and exporting beautiful coffee recipe cards.",
+  alternates: {
+    canonical: "/"
+  },
+  openGraph: {
+    title: "Coffee Journey",
+    description: "Track every cup, share your best recipes, and brew better coffee together.",
+    images: [
+      {
+        url: images.v60Pour,
+        width: 1200,
+        height: 800,
+        alt: "Pour-over coffee brewing"
+      }
+    ]
+  }
+};
+
+export default function LandingPage() {
+  const featuredRecipe = seedRecipes[0];
 
   return (
     <main className="min-h-dvh">
@@ -58,10 +81,17 @@ export default async function LandingPage() {
           </dl>
         </div>
         <div className="relative min-h-[520px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)]">
-          <Image src={featuredRecipe.coverUrl} alt="" fill priority sizes="50vw" className="object-cover" />
+          <Image
+            src={featuredRecipe.coverUrl}
+            alt="Pour-over coffee recipe preview"
+            fill
+            priority
+            sizes="(max-width: 768px) 100vw, 50vw"
+            className="object-cover"
+          />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
           <div className="absolute bottom-5 left-5 right-5">
-            <RecipeCard recipe={featuredRecipe} compact priority />
+            <RecipeCard recipe={featuredRecipe} compact />
           </div>
         </div>
       </section>
