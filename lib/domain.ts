@@ -272,6 +272,26 @@ export type Challenge = {
   entryCount: number;
 };
 
+export type ChallengeEntry = {
+  challengeId: string;
+  author: UserProfile;
+  brewLog?: BrewLog;
+  notes: string;
+  createdAt: string;
+};
+
+export type ChallengeLeaderboardEntry = {
+  author: UserProfile;
+  entryCount: number;
+  averageRating: number;
+};
+
+export type ChallengeDetail = {
+  challenge: Challenge;
+  entries: ChallengeEntry[];
+  leaderboard: ChallengeLeaderboardEntry[];
+};
+
 export type Conversation = {
   id: string;
   participant: UserProfile;

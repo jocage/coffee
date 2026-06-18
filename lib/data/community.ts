@@ -13,11 +13,25 @@ import {
 import { profiles } from "@/db/schema/profiles";
 import {
   challenges as seedChallenges,
+  brewLogs as seedBrewLogs,
   clubs as seedClubs,
   creators as seedCreators,
   recipes as seedRecipes
 } from "@/lib/data/seed";
-import type { Challenge, Club, ClubDetail, ClubPost, Collection, Recipe, Visibility } from "@/lib/domain";
+import type {
+  BrewLog,
+  Challenge,
+  ChallengeDetail,
+  ChallengeEntry,
+  ChallengeLeaderboardEntry,
+  Club,
+  ClubDetail,
+  ClubPost,
+  Collection,
+  Recipe,
+  UserProfile,
+  Visibility
+} from "@/lib/domain";
 import {
   createNotificationInDb,
   ensureCurrentIdentity,
@@ -34,6 +48,7 @@ import { getBrewLogsFromDb, getRecipesFromDb } from "@/lib/data/recipes";
 type DbCollection = typeof collectionsTable.$inferSelect;
 type DbProfile = typeof profiles.$inferSelect;
 type DbClubPost = typeof clubPosts.$inferSelect;
+type DbChallengeEntry = typeof challengeEntries.$inferSelect;
 
 async function mapCollectionWithItems(row: DbCollection, owner: DbProfile): Promise<Collection> {
   const rows = await db.query.collectionItems.findMany({
@@ -380,6 +395,53 @@ export async function getChallengeByIdFromDb(id: string): Promise<Challenge | nu
   return challenges.find((challenge) => challenge.id === id) ?? null;
 }
 
+export async function getChallengeDetailByIdFromDb(id: string): Promise<ChallengeDetail | null> {
+  return withSeedFallback(async () => {
+    const challenge = await getChallengeByIdFromDb(id);
+
+    if (!challenge) {
+      return null;
+    }
+
+    const entryRows = await db.query.challengeEntries.findMany({
+      where: eq(challengeEntries.challengeId, id),
+      orderBy: (table, { desc }) => [desc(table.createdAt)]
+    });
+
+    if (entryRows.length === 0) {
+      return {
+        challenge,
+        entries: [],
+        leaderboard: []
+      };
+    }
+
+    const [authorRows, brewLogs] = await Promise.all([
+      db.query.profiles.findMany({
+        where: inArray(
+          profiles.userId,
+          entryRows.map((entry) => entry.userId)
+        )
+      }),
+      getBrewLogsFromDb()
+    ]);
+    const authorsById = new Map(authorRows.map((profile) => [profile.userId, mapProfile(profile)]));
+    const brewLogsById = new Map(brewLogs.map((brewLog) => [brewLog.id, brewLog]));
+    const entries = entryRows.map((entry) =>
+      mapChallengeEntry(entry, authorsById, brewLogsById)
+    );
+
+    return {
+      challenge: {
+        ...challenge,
+        entryCount: entries.length
+      },
+      entries,
+      leaderboard: buildChallengeLeaderboard(entries)
+    };
+  }, buildSeedChallengeDetail(id));
+}
+
 function canReadClubContent(club: Club, isMember: boolean) {
   return club.visibility === "public" || isMember;
 }
@@ -437,7 +499,7 @@ function buildSeedClubDetail(slug: string): ClubDetail | null {
 
 export async function enterChallengeInDb(input: {
   challengeId: string;
-  brewLogId?: string;
+  brewLogId: string;
   notes?: string;
 }) {
   const viewerId = await ensureCurrentIdentity();
@@ -449,7 +511,14 @@ export async function enterChallengeInDb(input: {
       brewLogId: input.brewLogId,
       notes: input.notes ?? ""
     })
-    .onConflictDoNothing();
+    .onConflictDoUpdate({
+      target: [challengeEntries.challengeId, challengeEntries.userId],
+      set: {
+        brewLogId: input.brewLogId,
+        notes: input.notes ?? "",
+        createdAt: new Date()
+      }
+    });
 
   const entries = await db.query.challengeEntries.findMany({
     where: eq(challengeEntries.challengeId, input.challengeId)
@@ -467,4 +536,71 @@ export async function enterChallengeInDb(input: {
     body: "Your brew was added to the challenge.",
     href: `/challenges/${input.challengeId}`
   });
+}
+
+function mapChallengeEntry(
+  row: DbChallengeEntry,
+  authorsById: Map<string, UserProfile>,
+  brewLogsById: Map<string, BrewLog>
+): ChallengeEntry {
+  return {
+    challengeId: row.challengeId,
+    author: authorsById.get(row.userId) ?? seedCreators[0],
+    brewLog: row.brewLogId ? brewLogsById.get(row.brewLogId) : undefined,
+    notes: row.notes,
+    createdAt: row.createdAt.toISOString()
+  };
+}
+
+function buildChallengeLeaderboard(entries: ChallengeEntry[]): ChallengeLeaderboardEntry[] {
+  const grouped = new Map<string, { author: UserProfile; ratings: number[]; entryCount: number }>();
+
+  for (const entry of entries) {
+    const current = grouped.get(entry.author.id) ?? {
+      author: entry.author,
+      ratings: [],
+      entryCount: 0
+    };
+    current.entryCount += 1;
+    if (entry.brewLog) {
+      current.ratings.push(entry.brewLog.rating);
+    }
+    grouped.set(entry.author.id, current);
+  }
+
+  return [...grouped.values()]
+    .map((item) => ({
+      author: item.author,
+      entryCount: item.entryCount,
+      averageRating:
+        item.ratings.length > 0
+          ? item.ratings.reduce((sum, rating) => sum + rating, 0) / item.ratings.length
+          : 0
+    }))
+    .sort((a, b) => b.averageRating - a.averageRating || b.entryCount - a.entryCount);
+}
+
+function buildSeedChallengeDetail(id: string): ChallengeDetail | null {
+  const challenge = seedChallenges.find((item) => item.id === id);
+
+  if (!challenge) {
+    return null;
+  }
+
+  const entries: ChallengeEntry[] = seedBrewLogs.slice(0, 2).map((brewLog) => ({
+    challengeId: challenge.id,
+    author: brewLog.author,
+    brewLog,
+    notes: "Testing one variable at a time and comparing sweetness, clarity and finish.",
+    createdAt: brewLog.brewedAt
+  }));
+
+  return {
+    challenge: {
+      ...challenge,
+      entryCount: entries.length
+    },
+    entries,
+    leaderboard: buildChallengeLeaderboard(entries)
+  };
 }

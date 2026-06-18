@@ -521,6 +521,9 @@ test("community actions submit successfully", async ({ page }) => {
     page.getByRole("button", { name: "Enter challenge" }).click()
   ]);
   await expect(page.getByRole("heading", { name: "Bloom control week" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Entries feed" })).toBeVisible();
+  await expect(page.getByText("Playwright challenge entry")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Leaderboard" })).toBeVisible();
 });
 
 test("messages and notifications actions submit", async ({ page }) => {

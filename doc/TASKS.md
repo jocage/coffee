@@ -108,7 +108,7 @@ Rule: `[x]` means there is concrete implementation evidence in the repo. `[ ] pa
 - [x] S41 Collection Detail — collection detail, public share page, add/remove item flow and ordering data are present.
 - [x] S42 Clubs List / Community Home — community/clubs pages, suggested clubs, active challenges and join action are present.
 - [x] S43 Club Detail — club header, posts, pinned recipes, members, challenges, join-gated create post and membership content rules are present.
-- [ ] partial S44 Challenge Detail — challenge page and brew-log entry form exist, but leaderboard/full entries feed are not confirmed.
+- [x] S44 Challenge Detail — challenge rules, required brew-log entry form, leaderboard and entries feed are present.
 - [x] S45 Messages List — conversations list and unread state are present.
 - [ ] partial S46 Conversation Detail — thread UI and send message route exist, but attach recipe/block/report flows are not implemented.
 - [x] S51 Settings — account/profile/privacy/units/export-oriented settings shell is present.

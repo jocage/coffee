@@ -14,7 +14,7 @@ export const createClubPostInputSchema = z.object({
 
 export const challengeEntryInputSchema = z.object({
   challengeId: z.string().min(1),
-  brewLogId: z.preprocess((value) => (value === "" ? undefined : value), z.string().optional()),
+  brewLogId: z.preprocess((value) => (value === "" ? undefined : value), z.string().min(1)),
   notes: z.string().trim().max(800).optional(),
   path: z.string().min(1).default("/community")
 });

@@ -5,6 +5,7 @@ import {
   getBrewLogsFromDb,
   getBrewLogByIdFromDb,
   getChallengeByIdFromDb,
+  getChallengeDetailByIdFromDb,
   getChallengesFromDb,
   getClubDetailBySlugFromDb,
   getClubBySlugFromDb,
@@ -441,6 +442,11 @@ export async function getClubDetailBySlug(slug: string) {
 export async function getChallengeById(id: string) {
   noStore();
   return getChallengeByIdFromDb(id);
+}
+
+export async function getChallengeDetailById(id: string) {
+  noStore();
+  return getChallengeDetailByIdFromDb(id);
 }
 
 export async function getConversations() {
