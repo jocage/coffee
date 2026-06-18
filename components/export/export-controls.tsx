@@ -16,7 +16,8 @@ export function ExportControls({
   onFormatChange,
   onAccentChange,
   onSaveDraft,
-  onSavePreset
+  onSavePreset,
+  showCustomization = true
 }: {
   recipe: Recipe;
   formatId: ExportFormatId;
@@ -26,6 +27,7 @@ export function ExportControls({
   onAccentChange: (accent: string) => void;
   onSaveDraft: () => void;
   onSavePreset: () => void;
+  showCustomization?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
   const selectedFormat = useMemo(() => formats.find((format) => format.id === formatId) ?? formats[0], [formatId]);
@@ -49,57 +51,61 @@ export function ExportControls({
 
   return (
     <>
-      <Card>
-        <CardTitle>Format</CardTitle>
-        <div className="mt-4 grid gap-3">
-          {formats.map((format, index) => {
-            const Icon = index === 0 ? Smartphone : index === 1 ? ImageIcon : Download;
-            return (
-              <label key={format.id} className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[var(--border)] p-3">
-                <span className="flex items-center gap-3">
-                  <Icon className="h-5 w-5 text-[var(--accent)]" aria-hidden />
-                  <span>
-                    <strong className="block text-sm">{format.label}</strong>
-                    <span className="text-xs text-[var(--text-dim)]">{format.detail}</span>
-                  </span>
-                </span>
-                <input
-                  type="radio"
-                  name="format"
-                  checked={format.id === formatId}
-                  className="accent-[var(--accent)]"
-                  onChange={() => onFormatChange(format.id)}
+      {showCustomization ? (
+        <>
+          <Card>
+            <CardTitle>Format</CardTitle>
+            <div className="mt-4 grid gap-3">
+              {formats.map((format, index) => {
+                const Icon = index === 0 ? Smartphone : index === 1 ? ImageIcon : Download;
+                return (
+                  <label key={format.id} className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[var(--border)] p-3">
+                    <span className="flex items-center gap-3">
+                      <Icon className="h-5 w-5 text-[var(--accent)]" aria-hidden />
+                      <span>
+                        <strong className="block text-sm">{format.label}</strong>
+                        <span className="text-xs text-[var(--text-dim)]">{format.detail}</span>
+                      </span>
+                    </span>
+                    <input
+                      type="radio"
+                      name="format"
+                      checked={format.id === formatId}
+                      className="accent-[var(--accent)]"
+                      onChange={() => onFormatChange(format.id)}
+                    />
+                  </label>
+                );
+              })}
+            </div>
+          </Card>
+          <Card>
+            <CardTitle>Style</CardTitle>
+            <div className="mt-4 flex gap-3">
+              {accents.map((color, index) => (
+                <button
+                  key={color}
+                  type="button"
+                  className="focus-ring h-10 w-10 rounded-full border border-[var(--border-strong)] data-[active=true]:ring-2 data-[active=true]:ring-[var(--accent)]"
+                  style={{ background: color }}
+                  aria-label={`Accent color ${index + 1}`}
+                  data-active={color === accent}
+                  onClick={() => onAccentChange(color)}
                 />
-              </label>
-            );
-          })}
-        </div>
-      </Card>
-      <Card>
-        <CardTitle>Style</CardTitle>
-        <div className="mt-4 flex gap-3">
-          {accents.map((color, index) => (
-            <button
-              key={color}
+              ))}
+            </div>
+            <Button
               type="button"
-              className="focus-ring h-10 w-10 rounded-full border border-[var(--border-strong)] data-[active=true]:ring-2 data-[active=true]:ring-[var(--accent)]"
-              style={{ background: color }}
-              aria-label={`Accent color ${index + 1}`}
-              data-active={color === accent}
-              onClick={() => onAccentChange(color)}
-            />
-          ))}
-        </div>
-        <Button
-          type="button"
-          variant="secondary"
-          className="mt-4 w-full"
-          icon={<Palette className="h-4 w-4" aria-hidden />}
-          onClick={onSavePreset}
-        >
-          Save preset
-        </Button>
-      </Card>
+              variant="secondary"
+              className="mt-4 w-full"
+              icon={<Palette className="h-4 w-4" aria-hidden />}
+              onClick={onSavePreset}
+            >
+              Save preset
+            </Button>
+          </Card>
+        </>
+      ) : null}
       <Button type="button" size="lg" className="w-full" icon={<Download className="h-5 w-5" aria-hidden />} disabled={isPending} onClick={exportPng}>
         {isPending ? "Rendering..." : "Export PNG"}
       </Button>

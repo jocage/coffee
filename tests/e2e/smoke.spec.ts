@@ -534,5 +534,20 @@ test("messages and notifications actions submit", async ({ page }) => {
 test("export studio exposes PNG export controls", async ({ page }) => {
   await page.goto("/export-studio");
   await expect(page.getByRole("heading", { name: "Export Studio" })).toBeVisible();
+  if (test.info().project.name.includes("mobile")) {
+    await expect(page.getByRole("tab", { name: "Select" })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+    await page.getByRole("tab", { name: "Share" }).click();
+    await expect(page.getByRole("button", { name: "Export PNG" })).toBeVisible();
+    await expect
+      .poll(() =>
+        page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)
+      )
+      .toBeTruthy();
+    return;
+  }
+
   await expect(page.getByRole("button", { name: "Export PNG" })).toBeVisible();
 });

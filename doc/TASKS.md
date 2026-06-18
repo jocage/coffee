@@ -98,7 +98,7 @@ Rule: `[x]` means there is concrete implementation evidence in the repo. `[ ] pa
 
 - [x] S01 Landing Page — landing UI, hero, CTAs, stats, feature sections, preview card, route metadata and static landing build are present; CTA routes to sign up.
 - [x] S47 Export Studio Desktop — select/preview/customize controls, block toggles, theme controls and PNG export are present.
-- [ ] partial S48 Export Studio Mobile — responsive export UI exists, but the planned mobile wizard is not implemented.
+- [x] S48 Export Studio Mobile — mobile Select/Format/Style/Blocks/Preview/Share wizard is present and covered by overflow smoke test.
 - [x] S49 Transparent PNG Output — transparent format mode and PNG export path are present.
 - [x] S50 Public Share Page — share route, recipe summary, CTA and OG metadata are present.
 
