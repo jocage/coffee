@@ -81,20 +81,34 @@ test("unit settings persist display preferences", async ({ page }) => {
   await expect(page.getByText("oz / F / %")).toBeVisible();
 });
 
-test("coffee form persists a new coffee", async ({ page }) => {
+test("coffee form persists a new coffee", async ({ page }, testInfo) => {
   const name = `Playwright Shakiso ${Date.now()}`;
 
   await page.goto("/coffees/new");
-  await page.getByLabel("Name").fill(name);
-  await page.getByLabel("Roaster").fill("Test Roaster");
-  await page.getByLabel("Origin").fill("Ethiopia");
-  await page.getByLabel("Process").fill("Washed");
-  await page.getByLabel("Rating").fill("4.5");
+
+  if (testInfo.project.name.includes("mobile")) {
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByLabel("Coffee name").fill(name);
+    await page.getByLabel("Coffee roaster").fill("Test Roaster");
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByLabel("Coffee origin").fill("Ethiopia");
+    await page.getByLabel("Coffee process").fill("Washed");
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByLabel("Coffee rating").fill("4.5");
+    await page.getByRole("button", { name: "Continue" }).click();
+  } else {
+    await page.getByLabel("Name", { exact: true }).fill(name);
+    await page.getByLabel("Roaster", { exact: true }).fill("Test Roaster");
+    await page.getByLabel("Origin", { exact: true }).fill("Ethiopia");
+    await page.getByLabel("Process", { exact: true }).fill("Washed");
+    await page.getByLabel("Rating", { exact: true }).fill("4.5");
+  }
+
   await Promise.all([
     page.waitForURL("**/coffees"),
     page.getByRole("button", { name: "Save coffee" }).click()
   ]);
-  await expect(page.getByRole("heading", { name })).toBeVisible();
+  await expect(page.getByRole("heading", { name }).first()).toBeVisible();
 });
 
 test("recipe form persists multiple ordered brew steps", async ({ page }) => {
@@ -225,6 +239,38 @@ test("dripper and filter forms persist new gear", async ({ page }) => {
     page.getByRole("button", { name: "Save filter" }).click()
   ]);
   await expect(page.getByRole("heading", { name: filter })).toBeVisible();
+});
+
+test("grinder form persists a new grinder", async ({ page }, testInfo) => {
+  const grinder = `Playwright Grinder ${Date.now()}`;
+
+  await page.goto("/gear/grinders/new");
+
+  if (testInfo.project.name.includes("mobile")) {
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByLabel("Grinder name").fill(grinder);
+    await page.getByLabel("Grinder brand").fill("Comandante");
+    await page.getByLabel("Grinder model").fill("C40 MK4");
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByLabel("Grinder burr type").fill("Stainless steel conical");
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByLabel("Grinder filter range").fill("40-45 clicks");
+    await page.getByLabel("Default for method").selectOption("V60");
+    await page.getByRole("button", { name: "Continue" }).click();
+  } else {
+    await page.getByLabel("Name", { exact: true }).fill(grinder);
+    await page.getByLabel("Brand", { exact: true }).fill("Comandante");
+    await page.getByLabel("Model", { exact: true }).fill("C40 MK4");
+    await page.locator("#burrType").fill("Stainless steel conical");
+    await page.locator("#filterRange").fill("40-45 clicks");
+    await page.locator("#defaultForMethod").selectOption("V60");
+  }
+
+  await Promise.all([
+    page.waitForURL("**/gear"),
+    page.getByRole("button", { name: "Save grinder" }).click()
+  ]);
+  await expect(page.getByRole("heading", { name: grinder }).first()).toBeVisible();
 });
 
 test("collection form creates a collection detail page", async ({ page }) => {

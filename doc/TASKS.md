@@ -72,11 +72,11 @@ Rule: `[x]` means there is concrete implementation evidence in the repo. `[ ] pa
 
 - [x] S24 Coffees Collection — collection route, status tabs/cards and add coffee entry point are present.
 - [x] S25 Add Coffee Desktop — coffee form, photo upload, origin/process/roast/flavor/rating/status/visibility and save flow are present.
-- [ ] partial S26 Add Coffee Mobile — responsive form exists, but the planned mobile wizard/camera flow is not confirmed.
+- [x] S26 Add Coffee Mobile — mobile 5-step wizard covers photo/camera upload, name/roaster, origin/process, roast/flavor and visibility.
 - [x] S27 Public Coffee Page — public coffee aggregation page, comments, public recipes and public brew logs are present.
 - [x] S28 Gear Library — gear route with categories/cards and add gear entry points is present.
 - [x] S29 Add Grinder Desktop — grinder form/catalog linking/default toggle/image upload/save flow are present.
-- [ ] partial S30 Add Grinder Mobile — responsive form exists, but the planned mobile wizard is not implemented.
+- [x] S30 Add Grinder Mobile — mobile 5-step wizard covers photo/camera upload, brand/model, type/burr, settings ranges, default method and visibility.
 - [x] S31 Add Dripper Desktop/Mobile — dripper form, save flow and recipe-builder selection data are present.
 - [x] S32 Add Filter Desktop/Mobile — filter form, save flow and recipe-builder selection data are present.
 - [x] S33 Public Gear Page — public gear aggregation page, comments, public recipes and public brew logs are present.

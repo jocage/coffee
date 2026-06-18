@@ -1,4 +1,5 @@
 import { saveGearAction, updateGearAction } from "@/lib/server-actions/gear";
+import { MobileGrinderWizard } from "@/components/forms/mobile-grinder-wizard";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select, Textarea } from "@/components/ui/form";
 import { MediaUploadField } from "@/components/media/media-upload-field";
@@ -48,94 +49,112 @@ export function GearForm({
   const title =
     resolvedType === "grinder" ? "grinder" : resolvedType === "dripper" ? "dripper" : "filter";
 
+  const action = gear ? updateGearAction : saveGearAction;
+  const desktopClassName =
+    resolvedType === "grinder"
+      ? "mt-5 hidden gap-4 md:grid-cols-2 lg:grid"
+      : "mt-5 grid gap-4 md:grid-cols-2";
+
   return (
-    <form
-      action={gear ? updateGearAction : saveGearAction}
-      className="mt-5 grid gap-4 md:grid-cols-2"
-    >
-      {gear ? <input type="hidden" name="id" value={gear.id} /> : null}
-      <input type="hidden" name="type" value={resolvedType} />
-      <MediaUploadField
-        entityType="gear"
-        label={`Add ${title} photo`}
-        urlFieldName="imageUrl"
-        initialUrl={gear?.imageUrl ?? grinderDefaults?.imageUrl ?? dripperDefaults?.imageUrl}
-        className="md:col-span-2"
-      />
-      <Field
-        id="name"
-        label="Name"
-        placeholder={
-          resolvedType === "grinder"
-            ? "Comandante C40"
-            : resolvedType === "dripper"
-              ? "Origami Air S"
-              : "Cafec Abaca"
-        }
-        defaultValue={gear?.name ?? grinderDefaults?.name ?? dripperDefaults?.name}
-      />
-      <Field
-        id="brand"
-        label="Brand"
-        placeholder={
-          resolvedType === "grinder"
-            ? "Comandante"
-            : resolvedType === "dripper"
-              ? "Origami"
-              : "Cafec"
-        }
-        defaultValue={gear?.brand ?? grinderDefaults?.brand ?? dripperDefaults?.brand}
-      />
-      <Field
-        id="model"
-        label="Model"
-        placeholder={
-          resolvedType === "grinder" ? "C40 MK4" : resolvedType === "dripper" ? "Air S" : "Abaca 02"
-        }
-        defaultValue={gear?.model ?? grinderDefaults?.model ?? dripperDefaults?.model}
-      />
-      {resolvedType === "grinder" ? <GrinderFields defaults={grinderDefaults} /> : null}
-      {resolvedType === "dripper" ? <DripperFields defaults={dripperDefaults} /> : null}
-      {resolvedType === "filter" ? <FilterFields /> : null}
-      <div className="md:col-span-2">
-        <Label htmlFor="notes">Notes</Label>
-        <Textarea
-          id="notes"
-          name="notes"
-          placeholder={`Notes about this ${title}.`}
-          defaultValue={gear?.notes ?? grinderDefaults?.notes ?? dripperDefaults?.notes}
+    <>
+      {resolvedType === "grinder" ? (
+        <MobileGrinderWizard
+          gear={gear}
+          defaults={grinderDefaults}
+          action={action}
+          defaultVisibility={defaultVisibility}
+          submitLabel={submitLabel}
         />
-      </div>
-      <div className={resolvedType === "filter" ? "hidden" : ""}>
-        <Label htmlFor="defaultForMethod">Default for</Label>
-        <Select
-          id="defaultForMethod"
-          name="defaultForMethod"
-          defaultValue={gear?.defaultForMethod ?? ""}
-        >
-          <option value="">Not default</option>
-          {methods.map((method) => (
-            <option key={method} value={method}>
-              {method}
-            </option>
-          ))}
-        </Select>
-      </div>
-      <div>
-        <Label htmlFor="visibility">Visibility</Label>
-        <Select
-          id="visibility"
-          name="visibility"
-          defaultValue={gear?.visibility ?? defaultVisibility}
-        >
-          <option value="private">Private</option>
-          <option value="followers">Followers</option>
-          <option value="unlisted">Unlisted</option>
-          <option value="public">Public</option>
-        </Select>
-      </div>
-      <Button type="submit">{submitLabel}</Button>
-    </form>
+      ) : null}
+      <form action={action} className={desktopClassName}>
+        {gear ? <input type="hidden" name="id" value={gear.id} /> : null}
+        <input type="hidden" name="type" value={resolvedType} />
+        <MediaUploadField
+          entityType="gear"
+          label={`Add ${title} photo`}
+          urlFieldName="imageUrl"
+          initialUrl={gear?.imageUrl ?? grinderDefaults?.imageUrl ?? dripperDefaults?.imageUrl}
+          className="md:col-span-2"
+        />
+        <Field
+          id="name"
+          label="Name"
+          placeholder={
+            resolvedType === "grinder"
+              ? "Comandante C40"
+              : resolvedType === "dripper"
+                ? "Origami Air S"
+                : "Cafec Abaca"
+          }
+          defaultValue={gear?.name ?? grinderDefaults?.name ?? dripperDefaults?.name}
+        />
+        <Field
+          id="brand"
+          label="Brand"
+          placeholder={
+            resolvedType === "grinder"
+              ? "Comandante"
+              : resolvedType === "dripper"
+                ? "Origami"
+                : "Cafec"
+          }
+          defaultValue={gear?.brand ?? grinderDefaults?.brand ?? dripperDefaults?.brand}
+        />
+        <Field
+          id="model"
+          label="Model"
+          placeholder={
+            resolvedType === "grinder"
+              ? "C40 MK4"
+              : resolvedType === "dripper"
+                ? "Air S"
+                : "Abaca 02"
+          }
+          defaultValue={gear?.model ?? grinderDefaults?.model ?? dripperDefaults?.model}
+        />
+        {resolvedType === "grinder" ? <GrinderFields defaults={grinderDefaults} /> : null}
+        {resolvedType === "dripper" ? <DripperFields defaults={dripperDefaults} /> : null}
+        {resolvedType === "filter" ? <FilterFields /> : null}
+        <div className="md:col-span-2">
+          <Label htmlFor="notes">Notes</Label>
+          <Textarea
+            id="notes"
+            name="notes"
+            placeholder={`Notes about this ${title}.`}
+            defaultValue={gear?.notes ?? grinderDefaults?.notes ?? dripperDefaults?.notes}
+          />
+        </div>
+        <div className={resolvedType === "filter" ? "hidden" : ""}>
+          <Label htmlFor="defaultForMethod">Default for</Label>
+          <Select
+            id="defaultForMethod"
+            name="defaultForMethod"
+            defaultValue={gear?.defaultForMethod ?? ""}
+          >
+            <option value="">Not default</option>
+            {methods.map((method) => (
+              <option key={method} value={method}>
+                {method}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="visibility">Visibility</Label>
+          <Select
+            id="visibility"
+            name="visibility"
+            defaultValue={gear?.visibility ?? defaultVisibility}
+          >
+            <option value="private">Private</option>
+            <option value="followers">Followers</option>
+            <option value="unlisted">Unlisted</option>
+            <option value="public">Public</option>
+          </Select>
+        </div>
+        <Button type="submit">{submitLabel}</Button>
+      </form>
+    </>
   );
 }
 
