@@ -379,6 +379,27 @@ test("explore filters combine on desktop and mobile", async ({ page }, testInfo)
 
   await expect(page.getByRole("heading", { name: "Travel AeroPress" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Morning Clarity with V60" })).toBeHidden();
+
+  await page.goto("/explore");
+  if (testInfo.project.name.includes("mobile")) {
+    await page.getByRole("button", { name: "Filters" }).click();
+    const dialog = page.getByRole("dialog", { name: "Explore filters" });
+    await dialog.getByLabel("Works with my setup").check();
+    await Promise.all([
+      page.waitForURL(/worksWithSetup=1/),
+      dialog.getByRole("button", { name: "Apply filters" }).click()
+    ]);
+  } else {
+    const filters = page.locator("aside");
+    await filters.getByLabel("Works with my setup").check();
+    await Promise.all([
+      page.waitForURL(/worksWithSetup=1/),
+      filters.getByRole("button", { name: "Apply filters" }).click()
+    ]);
+  }
+  await expect(page.getByText("Setup match")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Morning Clarity with V60" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Travel AeroPress" })).toBeHidden();
 });
 
 test("recipe comments persist and render", async ({ page }) => {

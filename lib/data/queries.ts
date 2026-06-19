@@ -127,67 +127,69 @@ export async function searchRecipes(filters: {
     visibility: filters.visibility
   });
 
-  return recipes.filter((recipe) => {
-    const queryMatches = filters.query
-      ? [
-          recipe.title,
-          recipe.subtitle,
-          recipe.description,
-          recipe.author.displayName,
-          recipe.author.handle,
-          recipe.coffee.name,
-          recipe.coffee.roaster,
-          recipe.coffee.origin,
-          recipe.coffee.process,
-          recipe.flavorNotes.join(" "),
-          recipe.gear.map((item) => `${item.brand} ${item.model} ${item.name}`).join(" ")
-        ].some((value) => value.toLowerCase().includes(filters.query?.toLowerCase() ?? ""))
-      : true;
-    const flavorMatches = filters.flavor
-      ? recipe.flavorNotes.join(" ").toLowerCase().includes(filters.flavor.toLowerCase())
-      : true;
-    const grinderMatches =
-      filters.grinder && filters.grinder !== "all"
-        ? recipe.gear.some(
-            (item) => item.type === "grinder" && gearMatchesFilter(item, filters.grinder ?? "")
-          )
+  return recipes
+    .filter((recipe) => {
+      const queryMatches = filters.query
+        ? [
+            recipe.title,
+            recipe.subtitle,
+            recipe.description,
+            recipe.author.displayName,
+            recipe.author.handle,
+            recipe.coffee.name,
+            recipe.coffee.roaster,
+            recipe.coffee.origin,
+            recipe.coffee.process,
+            recipe.flavorNotes.join(" "),
+            recipe.gear.map((item) => `${item.brand} ${item.model} ${item.name}`).join(" ")
+          ].some((value) => value.toLowerCase().includes(filters.query?.toLowerCase() ?? ""))
         : true;
-    const dripperMatches =
-      filters.dripper && filters.dripper !== "all"
-        ? recipe.gear.some(
-            (item) => item.type === "dripper" && gearMatchesFilter(item, filters.dripper ?? "")
-          )
+      const flavorMatches = filters.flavor
+        ? recipe.flavorNotes.join(" ").toLowerCase().includes(filters.flavor.toLowerCase())
         : true;
-    const setupMatches = filters.worksWithSetup
-      ? recipe.gear.some((item) => item.defaultForMethod === recipe.method)
-      : true;
+      const grinderMatches =
+        filters.grinder && filters.grinder !== "all"
+          ? recipe.gear.some(
+              (item) => item.type === "grinder" && gearMatchesFilter(item, filters.grinder ?? "")
+            )
+          : true;
+      const dripperMatches =
+        filters.dripper && filters.dripper !== "all"
+          ? recipe.gear.some(
+              (item) => item.type === "dripper" && gearMatchesFilter(item, filters.dripper ?? "")
+            )
+          : true;
+      const setupMatches = filters.worksWithSetup
+        ? getSetupCompatibilityScore(recipe) > 0
+        : true;
 
-    return (
-      queryMatches &&
-      flavorMatches &&
-      numberAtLeast(recipe.doseGrams, filters.doseMin) &&
-      numberAtMost(recipe.doseGrams, filters.doseMax) &&
-      numberAtLeast(recipe.waterGrams, filters.waterMin) &&
-      numberAtMost(recipe.waterGrams, filters.waterMax) &&
-      numberAtLeast(recipe.ratio, filters.ratioMin) &&
-      numberAtMost(recipe.ratio, filters.ratioMax) &&
-      numberAtLeast(recipe.temperatureCelsius, filters.temperatureMin) &&
-      numberAtMost(recipe.temperatureCelsius, filters.temperatureMax) &&
-      numberAtMost(recipe.totalTimeSeconds, filters.timeMax) &&
-      (!filters.roastLevel ||
-        filters.roastLevel === "all" ||
-        recipe.coffee.roastLevel === filters.roastLevel) &&
-      (!filters.process ||
-        filters.process === "all" ||
-        recipe.coffee.process.toLowerCase() === filters.process.toLowerCase()) &&
-      (!filters.difficulty ||
-        filters.difficulty === "all" ||
-        recipe.difficulty === filters.difficulty) &&
-      grinderMatches &&
-      dripperMatches &&
-      setupMatches
-    );
-  });
+      return (
+        queryMatches &&
+        flavorMatches &&
+        numberAtLeast(recipe.doseGrams, filters.doseMin) &&
+        numberAtMost(recipe.doseGrams, filters.doseMax) &&
+        numberAtLeast(recipe.waterGrams, filters.waterMin) &&
+        numberAtMost(recipe.waterGrams, filters.waterMax) &&
+        numberAtLeast(recipe.ratio, filters.ratioMin) &&
+        numberAtMost(recipe.ratio, filters.ratioMax) &&
+        numberAtLeast(recipe.temperatureCelsius, filters.temperatureMin) &&
+        numberAtMost(recipe.temperatureCelsius, filters.temperatureMax) &&
+        numberAtMost(recipe.totalTimeSeconds, filters.timeMax) &&
+        (!filters.roastLevel ||
+          filters.roastLevel === "all" ||
+          recipe.coffee.roastLevel === filters.roastLevel) &&
+        (!filters.process ||
+          filters.process === "all" ||
+          recipe.coffee.process.toLowerCase() === filters.process.toLowerCase()) &&
+        (!filters.difficulty ||
+          filters.difficulty === "all" ||
+          recipe.difficulty === filters.difficulty) &&
+        grinderMatches &&
+        dripperMatches &&
+        setupMatches
+      );
+    })
+    .sort((a, b) => getSetupCompatibilityScore(b) - getSetupCompatibilityScore(a));
 }
 
 export async function getMyRecipes(filters?: { query?: string; visibility?: Visibility | "all" }) {
@@ -515,6 +517,10 @@ function gearMatchesFilter(item: GearItem, filter: string): boolean {
     slugifyGear(item) === filter ||
     item.name.toLowerCase() === filter.toLowerCase()
   );
+}
+
+function getSetupCompatibilityScore(recipe: Recipe) {
+  return recipe.gear.filter((item) => item.defaultForMethod === recipe.method).length;
 }
 
 function slugifyGear(item: GearItem) {

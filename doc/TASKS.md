@@ -118,7 +118,7 @@ Rule: `[x]` means there is concrete implementation evidence in the repo. `[ ] pa
 #### Data Quality + Release
 
 - [x] P01 Seed Data — demo users, recipes, coffees, gear, feed/social data and seed/clear scripts are present.
-- [ ] partial P02 Works With My Setup — default gear fields exist in profile/settings area, but Explore compatibility ranking/filter is not confirmed.
+- [x] P02 Works With My Setup — default gear fields, Explore setup compatibility ranking/filter and visible setup-match state are present.
 - [ ] partial P03 Recipe Stats Aggregation — stats fields and event updates exist, but a backfill job/complete aggregation pipeline is not confirmed.
 - [x] Q01 Unit tests — validators, permission helpers, recipe math, storage and timer unit tests are present.
 - [ ] partial Q02 E2E tests — Playwright smoke coverage exists for many flows, but the full listed E2E flow set is not complete.

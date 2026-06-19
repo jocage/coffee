@@ -202,7 +202,10 @@ export default async function ExplorePage({
           recipes.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {recipes.map((recipe) => (
-                <RecipeCard key={recipe.id} recipe={recipe} />
+                <div key={recipe.id} className="grid gap-2">
+                  {filterValues.worksWithSetup ? <Badge>Setup match</Badge> : null}
+                  <RecipeCard recipe={recipe} />
+                </div>
               ))}
             </div>
           ) : (
