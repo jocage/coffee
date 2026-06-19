@@ -1,4 +1,24 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
+
+const testImageUrl =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/atTK08AAAAASUVORK5CYII=";
+
+async function setHiddenInputValue(field: Locator, value: string) {
+  await field.evaluate((input, nextValue) => {
+    const element = input as HTMLInputElement;
+    element.value = String(nextValue);
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  }, value);
+}
+
+async function expectPngDownload(page: Page) {
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Export PNG" }).click()
+  ]);
+  expect(download.suggestedFilename()).toMatch(/\.png$/);
+}
 
 test("landing page renders primary CTAs", async ({ page }) => {
   await page.goto("/");
@@ -114,7 +134,9 @@ test("coffee form persists a new coffee", async ({ page }, testInfo) => {
   await expect(page.getByRole("heading", { name }).first()).toBeVisible();
 });
 
-test("recipe form persists multiple ordered brew steps", async ({ page }) => {
+test("recipe form publishes searchable recipes with cover photos and ordered steps", async ({
+  page
+}, testInfo) => {
   const title = `Playwright V60 ${Date.now()}`;
 
   await page.goto("/recipes/new");
@@ -123,6 +145,9 @@ test("recipe form persists multiple ordered brew steps", async ({ page }) => {
     .locator("form")
     .filter({ has: page.locator(isMobileWizard ? "#mobile-title" : "#title") });
   await recipeForm.getByLabel("Recipe name").fill(title);
+  if (!isMobileWizard) {
+    await recipeForm.getByLabel("Visibility").selectOption("public");
+  }
   if (await page.getByRole("button", { name: "Steps" }).isVisible()) {
     await page.getByRole("button", { name: "Steps" }).click();
   }
@@ -133,16 +158,30 @@ test("recipe form persists multiple ordered brew steps", async ({ page }) => {
   await recipeForm.locator('input[name="stepCumulativeWaterGrams"]').nth(1).fill("120");
   await recipeForm.locator('textarea[name="stepInstruction"]').nth(1).fill("Second steady pour");
 
+  if (isMobileWizard) {
+    await page.getByRole("button", { name: "Preview" }).click();
+  }
+  await setHiddenInputValue(recipeForm.locator('input[name="coverUrl"]'), testImageUrl);
+
   await Promise.all([
     page.waitForURL(
       (url) => url.pathname.startsWith("/recipes/") && url.pathname !== "/recipes/new"
     ),
-    recipeForm.getByRole("button", { name: "Save draft" }).click()
+    recipeForm
+      .getByRole("button", {
+        name: testInfo.project.name.includes("mobile") ? "Save draft" : "Publish"
+      })
+      .click()
   ]);
 
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
   await expect(page.getByText("Pour 2")).toBeVisible();
   await expect(page.getByText("Second steady pour")).toBeVisible();
+
+  if (!testInfo.project.name.includes("mobile")) {
+    await page.goto(`/explore?q=${encodeURIComponent(title)}`);
+    await expect(page.getByRole("heading", { name: title })).toBeVisible();
+  }
 });
 
 test("brew log form persists a new brew", async ({ page }, testInfo) => {
@@ -151,6 +190,9 @@ test("brew log form persists a new brew", async ({ page }, testInfo) => {
   await page.goto("/brews/new");
 
   if (testInfo.project.name.includes("mobile")) {
+    const brewForm = page
+      .locator("form")
+      .filter({ has: page.locator("#mobile-brew-recipeId") });
     await page.getByLabel("Recipe source").selectOption("");
     await page.getByLabel("Method", { exact: true }).selectOption("Espresso");
     await page.getByRole("button", { name: "Continue" }).click();
@@ -165,6 +207,7 @@ test("brew log form persists a new brew", async ({ page }, testInfo) => {
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByRole("button", { name: "Continue" }).click();
+    await setHiddenInputValue(brewForm.locator('input[name="photoUrl"]'), testImageUrl);
   } else {
     await page.getByLabel("Recipe", { exact: true }).selectOption("");
     await page.getByLabel("Brew method").selectOption("Espresso");
@@ -175,6 +218,7 @@ test("brew log form persists a new brew", async ({ page }, testInfo) => {
     await page.getByLabel("Pressure (bar)").fill("9");
     await page.getByLabel("Grind setting").fill(grind);
     await page.getByLabel("Notes", { exact: true }).fill("Playwright espresso brew log entry");
+    await page.getByLabel("Photo URL").fill(testImageUrl);
   }
 
   await Promise.all([
@@ -455,8 +499,9 @@ test("recipe comments persist and render", async ({ page }) => {
   await expect(page.getByText(`Reported comment: ${body}`)).toBeVisible();
 });
 
-test("saved recipes appear in recipes saved tab", async ({ page }) => {
+test("public recipe interactions appear in recipes saved tab", async ({ page }) => {
   await page.goto("/r/tetsu/morning-clarity-v60");
+  await page.getByRole("button", { name: "Like" }).click();
   await Promise.all([
     page.waitForURL("**/r/tetsu/morning-clarity-v60?saved=1"),
     page.getByRole("button", { name: "Save" }).click()
@@ -600,8 +645,10 @@ test("export studio exposes PNG export controls", async ({ page }) => {
         page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)
       )
       .toBeTruthy();
+    await expectPngDownload(page);
     return;
   }
 
   await expect(page.getByRole("button", { name: "Export PNG" })).toBeVisible();
+  await expectPngDownload(page);
 });

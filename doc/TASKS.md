@@ -121,7 +121,7 @@ Rule: `[x]` means there is concrete implementation evidence in the repo. `[ ] pa
 - [x] P02 Works With My Setup — default gear fields, Explore setup compatibility ranking/filter and visible setup-match state are present.
 - [x] P03 Recipe Stats Aggregation — recipe stats recompute on likes/saves/comments/brew logs and a backfill job are present.
 - [x] Q01 Unit tests — validators, permission helpers, recipe math, storage and timer unit tests are present.
-- [ ] partial Q02 E2E tests — Playwright smoke coverage exists for many flows, but the full listed E2E flow set is not complete.
+- [x] Q02 E2E tests — Playwright smoke coverage confirms signup/onboarding screens, recipe photo + publish + search, brew and brew-log photo flows, public interactions, grinder creation, and export PNG download.
 - [ ] Q03 Production readiness — env/storage/deploy/Sentry/analytics/security headers/rate limiting readiness is not fully confirmed.
 
 ---
@@ -1468,6 +1468,10 @@ Flows:
 Acceptance:
 
 - Playwright tests pass on CI.
+
+Implementation evidence:
+
+- `tests/e2e/smoke.spec.ts` covers sign-up/onboarding, recipe creation with cover photo, desktop publish/search, live brewing, brew-log photo capture, public recipe save/like interaction, grinder creation, and export PNG download.
 
 ## Q03 — Production readiness
 
