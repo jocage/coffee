@@ -110,7 +110,7 @@ Rule: `[x]` means there is concrete implementation evidence in the repo. `[ ] pa
 - [x] S43 Club Detail — club header, posts, pinned recipes, members, challenges, join-gated create post and membership content rules are present.
 - [x] S44 Challenge Detail — challenge rules, required brew-log entry form, leaderboard and entries feed are present.
 - [x] S45 Messages List — conversations list and unread state are present.
-- [ ] partial S46 Conversation Detail — thread UI and send message route exist, but attach recipe/block/report flows are not implemented.
+- [x] S46 Conversation Detail — thread UI, send message, recipe attachments, report/block flows and send permission guard are present.
 - [x] S51 Settings — account/profile/privacy/units/export-oriented settings shell is present.
 - [x] S52 Privacy Settings — default visibility/comment/message/profile toggles and persistence are present.
 - [x] S53 Admin Moderation Dashboard — admin-gated moderation dashboard with reports/actions is present.

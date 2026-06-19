@@ -5,7 +5,7 @@ export type MessagePolicy = "none" | "followers" | "public";
 export type WeightUnit = "grams" | "ounces";
 export type TemperatureUnit = "celsius" | "fahrenheit";
 export type RatioStyle = "brew_ratio" | "percent";
-export type SocialTargetType = "recipe" | "brew_log" | "comment" | "collection" | "coffee" | "gear";
+export type SocialTargetType = "recipe" | "brew_log" | "comment" | "collection" | "coffee" | "gear" | "conversation";
 export type BrewMethod =
   | "V60"
   | "Origami"
@@ -298,6 +298,22 @@ export type Conversation = {
   lastMessage: string;
   unreadCount: number;
   updatedAt: string;
+};
+
+export type ConversationMessage = {
+  id: string;
+  conversationId: string;
+  sender: UserProfile;
+  body: string;
+  recipe?: Recipe;
+  createdAt: string;
+};
+
+export type ConversationDetail = {
+  conversation: Conversation;
+  messages: ConversationMessage[];
+  canSend: boolean;
+  isBlocked: boolean;
 };
 
 export type Notification = {

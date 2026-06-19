@@ -22,5 +22,11 @@ export const challengeEntryInputSchema = z.object({
 export const sendMessageInputSchema = z.object({
   conversationId: z.string().min(1),
   body: z.string().trim().min(1).max(1200),
+  recipeId: z.preprocess((value) => (value === "" ? undefined : value), z.string().optional()),
+  path: z.string().min(1).default("/messages")
+});
+
+export const blockConversationInputSchema = z.object({
+  conversationId: z.string().min(1),
   path: z.string().min(1).default("/messages")
 });

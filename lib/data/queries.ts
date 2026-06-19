@@ -16,6 +16,7 @@ import {
   getCoffeesFromDb,
   getCommentsForTargetFromDb,
   getContentReportsFromDb,
+  getConversationDetailByIdFromDb,
   getConversationByIdFromDb,
   getConversationsFromDb,
   getDripperCatalogFromDb,
@@ -457,6 +458,11 @@ export async function getConversations() {
 export async function getConversationById(id: string) {
   noStore();
   return getConversationByIdFromDb(id);
+}
+
+export async function getConversationDetailById(id: string) {
+  noStore();
+  return getConversationDetailByIdFromDb(id);
 }
 
 export async function getNotifications() {

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const socialTargetSchema = z.enum(["recipe", "brew_log", "comment", "collection", "coffee", "gear"]);
+export const socialTargetSchema = z.enum(["recipe", "brew_log", "comment", "collection", "coffee", "gear", "conversation"]);
 
 export const socialTargetInputSchema = z.object({
   targetType: socialTargetSchema,

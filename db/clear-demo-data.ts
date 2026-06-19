@@ -7,7 +7,16 @@ import { coffeeBeans } from "@/db/schema/coffee";
 import { collections } from "@/db/schema/collections";
 import { gearItems } from "@/db/schema/gear";
 import { recipes as recipesTable } from "@/db/schema/recipes";
-import { comments, contentReports, directMessages, notifications, reactions, saves } from "@/db/schema/social";
+import {
+  comments,
+  contentReports,
+  directConversationParticipants,
+  directConversations,
+  directMessages,
+  notifications,
+  reactions,
+  saves
+} from "@/db/schema/social";
 import {
   brewLogs as seedBrewLogs,
   challenges as seedChallenges,
@@ -84,6 +93,20 @@ async function main() {
   await deleteByIds(targetIds, (ids) => db.delete(reactions).where(inArray(reactions.targetId, ids)));
   await deleteByIds(targetIds, (ids) => db.delete(saves).where(inArray(saves.targetId, ids)));
   await db.delete(directMessages).where(ilike(directMessages.body, "Playwright%"));
+  await db
+    .delete(directMessages)
+    .where(inArray(directMessages.conversationId, ["conversation_alex", "conversation_tetsu"]));
+  await db
+    .delete(directConversationParticipants)
+    .where(
+      inArray(directConversationParticipants.conversationId, [
+        "conversation_alex",
+        "conversation_tetsu"
+      ])
+    );
+  await db
+    .delete(directConversations)
+    .where(inArray(directConversations.id, ["conversation_alex", "conversation_tetsu"]));
   await db.delete(notifications).where(or(ilike(notifications.body, "%Playwright%"), ilike(notifications.body, "%PW %")));
 
   await deleteByIds(demoBrewLogIds, (ids) => db.delete(brewLogs).where(inArray(brewLogs.id, ids)));

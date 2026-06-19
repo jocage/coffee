@@ -21,13 +21,18 @@ import {
 } from "@/db/schema/social";
 import {
   conversations as seedConversations,
-  notifications as seedNotifications
+  currentUser as seedCurrentUser,
+  notifications as seedNotifications,
+  recipes as seedRecipes
 } from "@/lib/data/seed";
 import type {
   Comment,
   ContentReport,
   Conversation,
+  ConversationDetail,
+  ConversationMessage,
   Notification,
+  Recipe,
   SocialCounts,
   SocialTargetType
 } from "@/lib/domain";
@@ -38,11 +43,15 @@ import {
   getNotificationTargetContext,
   mapComment,
   mapContentReport,
+  mapProfile,
   mapNotification,
   shouldUseDemoData,
   withSeedFallback
 } from "@/lib/data/shared";
 import { ensureCurrentUserIsAdmin } from "@/lib/data/profiles";
+import { getRecipesFromDb } from "@/lib/data/recipes";
+
+type DbDirectMessage = typeof directMessages.$inferSelect;
 
 export async function getCommentsForTargetFromDb(input: {
   targetType: SocialTargetType;
@@ -392,8 +401,87 @@ export async function getConversationByIdFromDb(id: string): Promise<Conversatio
   return conversations.find((conversation) => conversation.id === id) ?? null;
 }
 
-export async function sendMessageInDb(input: { conversationId: string; body: string }) {
+export async function getConversationDetailByIdFromDb(id: string): Promise<ConversationDetail | null> {
+  return withSeedFallback(async () => {
+    const viewerId = await ensureCurrentIdentity();
+    const conversation = await db.query.directConversations.findFirst({
+      where: eq(directConversations.id, id)
+    });
+
+    if (!conversation) {
+      return shouldUseDemoData() ? buildSeedConversationDetail(id) : null;
+    }
+
+    const viewerParticipant = await db.query.directConversationParticipants.findFirst({
+      where: and(
+        eq(directConversationParticipants.conversationId, id),
+        eq(directConversationParticipants.userId, viewerId)
+      )
+    });
+
+    if (!viewerParticipant) {
+      return shouldUseDemoData() && seedConversations.some((item) => item.id === id)
+        ? buildSeedConversationDetail(id)
+        : null;
+    }
+
+    const participants = await db.query.directConversationParticipants.findMany({
+      where: eq(directConversationParticipants.conversationId, id)
+    });
+    const otherParticipantId = participants.find((participant) => participant.userId !== viewerId)?.userId;
+    const fallback = seedConversations.find((item) => item.id === id) ?? seedConversations[0];
+    const [otherProfile, messages, recipes] = await Promise.all([
+      otherParticipantId
+        ? db.query.profiles.findFirst({
+            where: eq(profiles.userId, otherParticipantId)
+          })
+        : null,
+      db.query.directMessages.findMany({
+        where: eq(directMessages.conversationId, id),
+        orderBy: (table, { asc }) => [asc(table.createdAt)]
+      }),
+      getRecipesFromDb({ visibility: "all" })
+    ]);
+    const senderIds = [...new Set(messages.map((message) => message.senderId))];
+    const senderRows =
+      senderIds.length > 0
+        ? await db.query.profiles.findMany({
+            where: inArray(profiles.userId, senderIds)
+          })
+        : [];
+    const sendersById = new Map(senderRows.map((profile) => [profile.userId, mapProfile(profile)]));
+    const recipesById = new Map(recipes.map((recipe) => [recipe.id, recipe]));
+    const mappedMessages = messages.map((message) =>
+      mapConversationMessage(message, sendersById, recipesById)
+    );
+
+    return {
+      conversation: {
+        ...fallback,
+        id,
+        participant: otherProfile ? mapProfile(otherProfile) : fallback.participant,
+        lastMessage: mappedMessages.at(-1)?.body ?? fallback.lastMessage,
+        unreadCount: viewerParticipant.unreadCount,
+        updatedAt: conversation.updatedAt.toISOString()
+      },
+      messages: mappedMessages,
+      canSend: !viewerParticipant.blockedAt,
+      isBlocked: Boolean(viewerParticipant.blockedAt)
+    };
+  }, buildSeedConversationDetail(id));
+}
+
+export async function sendMessageInDb(input: { conversationId: string; body: string; recipeId?: string }) {
   const viewerId = await ensureCurrentIdentity();
+  const conversation = await db.query.directConversations.findFirst({
+    where: eq(directConversations.id, input.conversationId)
+  });
+  const isSeedConversation = seedConversations.some((item) => item.id === input.conversationId);
+
+  if (!conversation && (!shouldUseDemoData() || !isSeedConversation)) {
+    throw new Error("Conversation not found");
+  }
+
   await db
     .insert(directConversations)
     .values({
@@ -404,21 +492,94 @@ export async function sendMessageInDb(input: { conversationId: string; body: str
       set: { updatedAt: new Date() }
     });
 
-  await db
+  const [participant] = await db
     .insert(directConversationParticipants)
     .values({
       conversationId: input.conversationId,
       userId: viewerId,
       unreadCount: 0
     })
-    .onConflictDoNothing();
+    .onConflictDoNothing()
+    .returning();
+  const existingParticipant =
+    participant ??
+    (await db.query.directConversationParticipants.findFirst({
+      where: and(
+        eq(directConversationParticipants.conversationId, input.conversationId),
+        eq(directConversationParticipants.userId, viewerId)
+      )
+    }));
+
+  if (!existingParticipant || existingParticipant.blockedAt) {
+    throw new Error("Message permission denied");
+  }
 
   await db.insert(directMessages).values({
     id: crypto.randomUUID(),
     conversationId: input.conversationId,
     senderId: viewerId,
-    body: input.body
+    body: input.body,
+    recipeId: input.recipeId
   });
+}
+
+export async function blockConversationInDb(input: { conversationId: string }) {
+  const viewerId = await ensureCurrentIdentity();
+  await db
+    .update(directConversationParticipants)
+    .set({ blockedAt: new Date() })
+    .where(
+      and(
+        eq(directConversationParticipants.conversationId, input.conversationId),
+        eq(directConversationParticipants.userId, viewerId)
+      )
+    );
+}
+
+function mapConversationMessage(
+  row: DbDirectMessage,
+  sendersById: Map<string, typeof seedCurrentUser>,
+  recipesById: Map<string, Recipe>
+): ConversationMessage {
+  return {
+    id: row.id,
+    conversationId: row.conversationId,
+    sender: sendersById.get(row.senderId) ?? seedCurrentUser,
+    body: row.body,
+    recipe: row.recipeId ? recipesById.get(row.recipeId) : undefined,
+    createdAt: row.createdAt.toISOString()
+  };
+}
+
+function buildSeedConversationDetail(id: string): ConversationDetail | null {
+  const conversation = seedConversations.find((item) => item.id === id);
+
+  if (!conversation) {
+    return null;
+  }
+
+  return {
+    conversation,
+    canSend: true,
+    isBlocked: false,
+    messages: [
+      {
+        id: `${id}_seed_inbound`,
+        conversationId: id,
+        sender: conversation.participant,
+        body: conversation.lastMessage,
+        recipe: seedRecipes[0],
+        createdAt: conversation.updatedAt
+      },
+      {
+        id: `${id}_seed_outbound`,
+        conversationId: id,
+        sender: seedCurrentUser,
+        body: "I will test it tomorrow and send brew notes.",
+        createdAt: conversation.updatedAt
+      }
+    ]
+  };
 }
 
 export async function getNotificationsFromDb(): Promise<Notification[]> {

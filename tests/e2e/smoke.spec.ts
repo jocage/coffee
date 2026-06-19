@@ -526,16 +526,34 @@ test("community actions submit successfully", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Leaderboard" })).toBeVisible();
 });
 
-test("messages and notifications actions submit", async ({ page }) => {
+test("messages and notifications actions submit", async ({ page }, testInfo) => {
   const body = `Playwright message ${Date.now()}`;
+  const conversationId = testInfo.project.name.includes("mobile")
+    ? "conversation_tetsu"
+    : "conversation_alex";
 
-  await page.goto("/messages/conversation_alex");
+  await page.goto(`/messages/${conversationId}`);
   await page.getByLabel("Write a message").fill(body);
+  await page.getByLabel("Attach recipe").selectOption({ index: 1 });
   await Promise.all([
-    page.waitForURL("**/messages/conversation_alex?sent=1"),
+    page.waitForURL(`**/messages/${conversationId}?sent=1`),
     page.getByRole("button", { name: "Send" }).click()
   ]);
   await expect(page.getByText(body)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Morning Clarity with V60" })).toBeVisible();
+
+  await page.getByLabel("Report details").fill("Playwright conversation report");
+  await Promise.all([
+    page.waitForURL(`**/messages/${conversationId}?reported=1`),
+    page.getByRole("button", { name: "Report conversation" }).click()
+  ]);
+  await expect(page.getByText("Report submitted.")).toBeVisible();
+
+  await Promise.all([
+    page.waitForURL(`**/messages/${conversationId}?blocked=1`),
+    page.getByRole("button", { name: "Block conversation" }).click()
+  ]);
+  await expect(page.getByText("Messaging is disabled for this conversation.")).toBeVisible();
 
   await page.goto("/notifications");
   await Promise.all([

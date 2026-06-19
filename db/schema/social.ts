@@ -1,7 +1,8 @@
 import { index, integer, pgEnum, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { user } from "@/db/schema/auth";
+import { recipes } from "@/db/schema/recipes";
 
-export const socialTargetEnum = pgEnum("social_target", ["recipe", "brew_log", "comment", "collection", "coffee", "gear"]);
+export const socialTargetEnum = pgEnum("social_target", ["recipe", "brew_log", "comment", "collection", "coffee", "gear", "conversation"]);
 export const reportReasonEnum = pgEnum("report_reason", ["spam", "harassment", "unsafe", "copyright", "other"]);
 export const reportStatusEnum = pgEnum("report_status", ["open", "reviewing", "resolved", "dismissed"]);
 
@@ -73,7 +74,8 @@ export const directConversationParticipants = pgTable(
   {
     conversationId: text("conversation_id").notNull().references(() => directConversations.id, { onDelete: "cascade" }),
     userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
-    unreadCount: integer("unread_count").notNull().default(0)
+    unreadCount: integer("unread_count").notNull().default(0),
+    blockedAt: timestamp("blocked_at", { withTimezone: true })
   },
   (table) => ({
     uniqueParticipant: uniqueIndex("direct_conversation_participants_unique").on(table.conversationId, table.userId)
@@ -87,6 +89,7 @@ export const directMessages = pgTable(
     conversationId: text("conversation_id").notNull().references(() => directConversations.id, { onDelete: "cascade" }),
     senderId: text("sender_id").notNull().references(() => user.id, { onDelete: "cascade" }),
     body: text("body").notNull(),
+    recipeId: text("recipe_id").references(() => recipes.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => ({

@@ -142,5 +142,9 @@ function targetHref(report: ContentReport) {
     return `/gear/${report.targetId}`;
   }
 
+  if (report.targetType === "conversation") {
+    return `/messages/${report.targetId}`;
+  }
+
   return "/admin/moderation";
 }

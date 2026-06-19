@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
+  blockConversationInDb,
   createClubPostInDb,
   enterChallengeInDb,
   joinClubInDb,
@@ -11,6 +12,7 @@ import {
 } from "@/lib/data/repositories";
 import { formDataToObject } from "@/lib/server-actions/result";
 import {
+  blockConversationInputSchema,
   challengeEntryInputSchema,
   createClubPostInputSchema,
   joinClubInputSchema,
@@ -53,6 +55,16 @@ export async function sendMessageAction(formData: FormData): Promise<void> {
   revalidatePath("/messages");
   revalidatePath(parsed.data.path);
   redirect(withSearchParam(parsed.data.path, "sent", "1"));
+}
+
+export async function blockConversationAction(formData: FormData): Promise<void> {
+  const parsed = blockConversationInputSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success) throw new Error("Conversation could not be blocked");
+
+  await blockConversationInDb(parsed.data);
+  revalidatePath("/messages");
+  revalidatePath(parsed.data.path);
+  redirect(withSearchParam(parsed.data.path, "blocked", "1"));
 }
 
 export async function markNotificationsReadAction(): Promise<void> {
