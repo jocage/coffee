@@ -26,6 +26,7 @@ import {
   withSeedFallback
 } from "@/lib/data/shared";
 import { getCoffeeByIdFromDb, getCoffeesFromDb, getGearFromDb } from "@/lib/data/catalog";
+import { recomputeRecipeStats } from "@/db/recipe-stats";
 
 export async function getRecipesFromDb(filters?: {
   query?: string;
@@ -523,6 +524,7 @@ export async function createBrewLogInDb(input: {
       body: `${actor.displayName} brewed ${recipe.title}.`,
       href: `/brews/${id}`
     });
+    await recomputeRecipeStats(recipe.id);
   }
 
   return { id };
@@ -546,6 +548,9 @@ export async function updateBrewLogInDb(input: {
   visibility: Visibility;
 }) {
   const viewerId = await ensureCurrentIdentity();
+  const existing = await db.query.brewLogs.findFirst({
+    where: and(eq(brewLogsTable.id, input.id), eq(brewLogsTable.ownerId, viewerId))
+  });
   const recipe = input.recipeId ? await getRecipeByIdFromDb(input.recipeId) : null;
   const coffee = input.coffeeId
     ? await getCoffeeByIdFromDb(input.coffeeId)
@@ -581,14 +586,28 @@ export async function updateBrewLogInDb(input: {
     throw new Error("Brew log not found");
   }
 
+  const recipeIds = new Set(
+    [existing?.recipeId, input.recipeId].filter((recipeId): recipeId is string => Boolean(recipeId))
+  );
+  for (const recipeId of recipeIds) {
+    await recomputeRecipeStats(recipeId);
+  }
+
   return updated;
 }
 
 export async function deleteBrewLogInDb(id: string) {
   const viewerId = await ensureCurrentIdentity();
+  const existing = await db.query.brewLogs.findFirst({
+    where: and(eq(brewLogsTable.id, id), eq(brewLogsTable.ownerId, viewerId))
+  });
   await db
     .delete(brewLogsTable)
     .where(and(eq(brewLogsTable.id, id), eq(brewLogsTable.ownerId, viewerId)));
+
+  if (existing?.recipeId) {
+    await recomputeRecipeStats(existing.recipeId);
+  }
 }
 
 export async function getFeedFromDb(): Promise<FeedItem[]> {

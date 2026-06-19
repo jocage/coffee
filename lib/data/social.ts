@@ -50,6 +50,7 @@ import {
 } from "@/lib/data/shared";
 import { ensureCurrentUserIsAdmin } from "@/lib/data/profiles";
 import { getRecipesFromDb } from "@/lib/data/recipes";
+import { recomputeRecipeStats } from "@/db/recipe-stats";
 
 type DbDirectMessage = typeof directMessages.$inferSelect;
 
@@ -241,6 +242,10 @@ export async function addReactionInDb(input: { targetType: SocialTargetType; tar
     .returning({ id: reactions.id });
 
   if (created) {
+    if (input.targetType === "recipe") {
+      await recomputeRecipeStats(input.targetId);
+    }
+
     const target = await getNotificationTargetContext(input);
     if (target) {
       await createNotificationInDb({
@@ -271,6 +276,10 @@ export async function saveTargetInDb(input: { targetType: SocialTargetType; targ
     .returning({ id: saves.id });
 
   if (created) {
+    if (input.targetType === "recipe") {
+      await recomputeRecipeStats(input.targetId);
+    }
+
     const target = await getNotificationTargetContext(input);
     if (target) {
       await createNotificationInDb({
@@ -332,6 +341,10 @@ export async function createCommentInDb(input: {
     body: input.body
   });
 
+  if (input.targetType === "recipe") {
+    await recomputeRecipeStats(input.targetId);
+  }
+
   const target = await getNotificationTargetContext(input);
   if (target) {
     await createNotificationInDb({
@@ -356,6 +369,10 @@ export async function deleteCommentInDb(id: string) {
   }
 
   await db.delete(comments).where(or(eq(comments.id, id), eq(comments.parentId, id)));
+
+  if (comment.targetType === "recipe") {
+    await recomputeRecipeStats(comment.targetId);
+  }
 }
 
 export async function getConversationsFromDb(): Promise<Conversation[]> {
