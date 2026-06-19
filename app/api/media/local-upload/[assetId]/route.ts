@@ -10,7 +10,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ asse
   const { assetId } = await params;
   const url = new URL(request.url);
   const storageKey = url.searchParams.get("storageKey") ?? assetId;
-  const normalizedStorageKey = path.normalize(storageKey).replace(/^(\.\.[/\\])+/, "");
+  const normalizedStorageKey = path.normalize(storageKey).replace(/^(\.\.[/\\])+/, "").replace(/^[/\\]+/, "");
   const ownerId = await ensureCurrentIdentity();
   const asset = await db.query.mediaAssets.findFirst({
     where: and(
@@ -26,8 +26,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ asse
   }
 
   const bytes = Buffer.from(await request.arrayBuffer());
-  const dir = path.join(/* turbopackIgnore: true */ process.cwd(), ".local", "uploads");
-  const destination = path.join(dir, normalizedStorageKey);
+  const dir = process.env.LOCAL_UPLOAD_DIR ?? ".local/uploads";
+  const destination = path.join(/* turbopackIgnore: true */ dir, normalizedStorageKey);
 
   await mkdir(path.dirname(destination), { recursive: true });
   await writeFile(destination, bytes);

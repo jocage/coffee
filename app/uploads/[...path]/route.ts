@@ -16,7 +16,7 @@ const contentTypes: Record<string, string> = {
 
 export async function GET(_request: Request, { params }: { params: Promise<{ path: string[] }> }) {
   const { path: requestedPath } = await params;
-  const storageKey = path.normalize(requestedPath.join("/")).replace(/^(\.\.[/\\])+/, "");
+  const storageKey = path.normalize(requestedPath.join("/")).replace(/^(\.\.[/\\])+/, "").replace(/^[/\\]+/, "");
   let ownerId: string;
 
   try {
@@ -36,10 +36,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pat
     return NextResponse.json({ error: "Upload not found" }, { status: 404 });
   }
 
-  const filePath = path.join(/* turbopackIgnore: true */ process.cwd(), ".local", "uploads", storageKey);
+  const uploadRoot = process.env.LOCAL_UPLOAD_DIR ?? ".local/uploads";
+  const filePath = path.join(/* turbopackIgnore: true */ uploadRoot, storageKey);
 
   try {
-    const bytes = await readFile(filePath);
+    const bytes = await readFile(/* turbopackIgnore: true */ filePath);
     const extension = path.extname(filePath).toLowerCase();
 
     return new NextResponse(bytes, {

@@ -122,7 +122,7 @@ Rule: `[x]` means there is concrete implementation evidence in the repo. `[ ] pa
 - [x] P03 Recipe Stats Aggregation — recipe stats recompute on likes/saves/comments/brew logs and a backfill job are present.
 - [x] Q01 Unit tests — validators, permission helpers, recipe math, storage and timer unit tests are present.
 - [x] Q02 E2E tests — Playwright smoke coverage confirms signup/onboarding screens, recipe photo + publish + search, brew and brew-log photo flows, public interactions, grinder creation, and export PNG download.
-- [ ] Q03 Production readiness — env/storage/deploy/Sentry/analytics/security headers/rate limiting readiness is not fully confirmed.
+- [x] Q03 Production readiness — Docker preflight/migrations, production env template, R2/S3 storage notes, Sentry, Umami analytics, security headers and rate limiting are configured.
 
 ---
 
@@ -1490,6 +1490,13 @@ Tasks:
 Acceptance:
 
 - Production deploy works from clean branch.
+
+Implementation evidence:
+
+- `Dockerfile` runs production preflight and DB migrations before starting the standalone Next server.
+- `.env.example` and `doc/DEPLOYMENT.md` document required Coolify, R2/S3, Sentry and Umami configuration.
+- `next.config.ts` applies security headers and Sentry source-map configuration.
+- `proxy.ts` rate-limits mutating requests and protects app routes.
 
 ---
 

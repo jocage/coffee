@@ -1,8 +1,13 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://coffee-journey.example";
+const umamiWebsiteId = process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID;
+const umamiScriptUrl = process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL;
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://coffee-journey.example"),
+  metadataBase: new URL(appUrl),
   title: {
     default: "Coffee Journey",
     template: "%s | Coffee Journey"
@@ -26,7 +31,17 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        {umamiWebsiteId && umamiScriptUrl ? (
+          <Script
+            defer
+            src={umamiScriptUrl}
+            data-website-id={umamiWebsiteId}
+            strategy="afterInteractive"
+          />
+        ) : null}
+      </body>
     </html>
   );
 }

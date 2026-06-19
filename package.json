@@ -24,6 +24,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "3.1065.0",
     "@aws-sdk/s3-request-presigner": "3.1065.0",
+    "@sentry/nextjs": "^10.58.0",
     "better-auth": "1.6.16",
     "clsx": "2.1.1",
     "drizzle-orm": "0.45.2",
@@ -36,6 +37,7 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "1.60.0",
     "@tailwindcss/postcss": "4.3.0",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.2",
@@ -47,7 +49,6 @@
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.9",
     "jsdom": "29.1.1",
-    "@playwright/test": "1.60.0",
     "prettier": "latest",
     "tailwindcss": "4.3.0",
     "tsx": "4.22.4",
