@@ -302,7 +302,7 @@ test("grinder form persists a new grinder", async ({ page }, testInfo) => {
     await page.getByLabel("Grinder burr type").fill("Stainless steel conical");
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Grinder filter range").fill("40-45 clicks");
-    await page.getByLabel("Default for method").selectOption("V60");
+    await page.getByLabel("Default brew method").selectOption("V60");
     await page.getByRole("button", { name: "Continue" }).click();
   } else {
     await page.getByLabel("Name", { exact: true }).fill(grinder);

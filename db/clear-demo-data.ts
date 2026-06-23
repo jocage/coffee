@@ -4,7 +4,7 @@ import { user } from "@/db/schema/auth";
 import { brewLogs } from "@/db/schema/brews";
 import { challenges, clubs } from "@/db/schema/clubs";
 import { coffeeBeans } from "@/db/schema/coffee";
-import { collections } from "@/db/schema/collections";
+import { collectionItems, collections } from "@/db/schema/collections";
 import { gearItems } from "@/db/schema/gear";
 import { recipes as recipesTable } from "@/db/schema/recipes";
 import {
@@ -46,6 +46,7 @@ async function main() {
     playwrightBrewLogRows,
     playwrightCoffeeRows,
     playwrightGearRows,
+    playwrightRecipeRows,
     playwrightCollectionRows,
     playwrightCommentRows
   ] = await Promise.all([
@@ -62,6 +63,16 @@ async function main() {
       .from(gearItems)
       .where(or(ilike(gearItems.name, "Playwright%"), ilike(gearItems.brand, "Playwright%"), ilike(gearItems.model, "Playwright%"))),
     db
+      .select({ id: recipesTable.id })
+      .from(recipesTable)
+      .where(
+        or(
+          ilike(recipesTable.title, "Playwright%"),
+          ilike(recipesTable.coverUrl, "data:image%"),
+          ...seedRecipes.map((recipe) => ilike(recipesTable.title, `Remix of ${recipe.title}%`))
+        )
+      ),
+    db
       .select({ id: collections.id })
       .from(collections)
       .where(or(ilike(collections.title, "Playwright%"), ilike(collections.description, "%Playwright%"))),
@@ -74,6 +85,7 @@ async function main() {
   const playwrightBrewLogIds = playwrightBrewLogRows.map((row) => row.id);
   const playwrightCoffeeIds = playwrightCoffeeRows.map((row) => row.id);
   const playwrightGearIds = playwrightGearRows.map((row) => row.id);
+  const playwrightRecipeIds = playwrightRecipeRows.map((row) => row.id);
   const playwrightCollectionIds = playwrightCollectionRows.map((row) => row.id);
   const playwrightCommentIds = playwrightCommentRows.map((row) => row.id);
   const targetIds = [
@@ -81,6 +93,7 @@ async function main() {
     ...playwrightBrewLogIds,
     ...playwrightCoffeeIds,
     ...playwrightGearIds,
+    ...playwrightRecipeIds,
     ...playwrightCollectionIds,
     ...playwrightCommentIds
   ];
@@ -92,6 +105,7 @@ async function main() {
   await db.delete(comments).where(ilike(comments.body, "Playwright%"));
   await deleteByIds(targetIds, (ids) => db.delete(reactions).where(inArray(reactions.targetId, ids)));
   await deleteByIds(targetIds, (ids) => db.delete(saves).where(inArray(saves.targetId, ids)));
+  await deleteByIds(targetIds, (ids) => db.delete(collectionItems).where(inArray(collectionItems.targetId, ids)));
   await db.delete(directMessages).where(ilike(directMessages.body, "Playwright%"));
   await db
     .delete(directMessages)
@@ -112,6 +126,7 @@ async function main() {
   await deleteByIds(demoBrewLogIds, (ids) => db.delete(brewLogs).where(inArray(brewLogs.id, ids)));
   await deleteByIds(playwrightBrewLogIds, (ids) => db.delete(brewLogs).where(inArray(brewLogs.id, ids)));
   await deleteByIds(demoRecipeIds, (ids) => db.delete(recipesTable).where(inArray(recipesTable.id, ids)));
+  await deleteByIds(playwrightRecipeIds, (ids) => db.delete(recipesTable).where(inArray(recipesTable.id, ids)));
   await deleteByIds(demoGearIds, (ids) => db.delete(gearItems).where(inArray(gearItems.id, ids)));
   await deleteByIds(playwrightGearIds, (ids) => db.delete(gearItems).where(inArray(gearItems.id, ids)));
   await deleteByIds(demoCoffeeIds, (ids) => db.delete(coffeeBeans).where(inArray(coffeeBeans.id, ids)));

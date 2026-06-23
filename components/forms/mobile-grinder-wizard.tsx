@@ -201,7 +201,7 @@ export function MobileGrinderWizard({
               />
             </div>
             <div>
-              <Label htmlFor="mobile-grinder-defaultForMethod">Default for method</Label>
+              <Label htmlFor="mobile-grinder-defaultForMethod">Default brew method</Label>
               <Select
                 id="mobile-grinder-defaultForMethod"
                 name="defaultForMethod"

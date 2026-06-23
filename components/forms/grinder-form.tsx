@@ -125,7 +125,7 @@ export function GearForm({
           />
         </div>
         <div className={resolvedType === "filter" ? "hidden" : ""}>
-          <Label htmlFor="defaultForMethod">Default for</Label>
+          <Label htmlFor="defaultForMethod">Default brew method</Label>
           <Select
             id="defaultForMethod"
             name="defaultForMethod"

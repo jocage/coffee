@@ -14,6 +14,7 @@
     "db:migrate": "node --env-file=.env node_modules/drizzle-kit/bin.cjs migrate",
     "db:seed": "node --env-file=.env node_modules/tsx/dist/cli.mjs db/seed.ts",
     "db:clear-demo": "node --env-file=.env node_modules/tsx/dist/cli.mjs db/clear-demo-data.ts",
+    "db:clear-recipe-mocks": "node --env-file=.env node_modules/tsx/dist/cli.mjs db/clear-recipe-mocks.ts",
     "stats:backfill": "node --env-file=.env node_modules/tsx/dist/cli.mjs db/backfill-recipe-stats.ts",
     "db:studio": "drizzle-kit studio",
     "auth:generate": "npx auth@latest generate --yes",

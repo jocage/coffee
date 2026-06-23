@@ -33,7 +33,7 @@ export default async function PublicGearPage({ params }: { params: Promise<{ slu
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
             <Metric label="Recipes" value={recipes.length.toString()} />
             <Metric label="Public brews" value={brewLogs.length.toString()} />
-            <Metric label="Default" value={gear.defaultForMethod ?? "None"} />
+            <Metric label="Default method" value={gear.defaultForMethod ?? "None"} />
           </div>
           <ReportForm targetType="gear" targetId={gear.id} path={path} />
         </div>
