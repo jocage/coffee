@@ -1,4 +1,13 @@
-import { boolean, index, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  index,
+  jsonb,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex
+} from "drizzle-orm/pg-core";
 import { user } from "@/db/schema/auth";
 
 export const visibilityEnum = pgEnum("visibility", ["private", "unlisted", "followers", "public"]);
@@ -7,7 +16,9 @@ export const profiles = pgTable(
   "profiles",
   {
     id: text("id").primaryKey(),
-    userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
     handle: text("handle").notNull(),
     displayName: text("display_name").notNull(),
     bio: text("bio").notNull().default(""),
@@ -29,9 +40,18 @@ export const profiles = pgTable(
     showGearOnProfile: boolean("show_gear_on_profile").notNull().default(true),
     showCoffeeOnProfile: boolean("show_coffee_on_profile").notNull().default(true),
     weightUnit: text("weight_unit").$type<"grams" | "ounces">().notNull().default("grams"),
-    temperatureUnit: text("temperature_unit").$type<"celsius" | "fahrenheit">().notNull().default("celsius"),
-    ratioStyle: text("ratio_style").$type<"brew_ratio" | "percent">().notNull().default("brew_ratio"),
+    temperatureUnit: text("temperature_unit")
+      .$type<"celsius" | "fahrenheit">()
+      .notNull()
+      .default("celsius"),
+    ratioStyle: text("ratio_style")
+      .$type<"brew_ratio" | "percent">()
+      .notNull()
+      .default("brew_ratio"),
     favoriteMethods: jsonb("favorite_methods").$type<string[]>().notNull().default([]),
+    defaultGrinderId: text("default_grinder_id"),
+    defaultDripperId: text("default_dripper_id"),
+    defaultFilterId: text("default_filter_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },

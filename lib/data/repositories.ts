@@ -75,6 +75,7 @@ import type {
 import { auth } from "@/lib/auth/auth";
 import { isAdminProfile } from "@/lib/permissions/admin";
 import { calculateRatio } from "@/modules/recipes/recipe-math";
+import { calculateRecipeStats } from "@/modules/recipes/stats";
 
 export const DEV_USER_ID = "dev-user";
 export const DEV_PROFILE_ID = "dev-profile";
@@ -1175,6 +1176,7 @@ export async function createBrewLogInDb(input: {
   });
 
   if (recipe) {
+    await refreshRecipeStatsInDb(recipe.id);
     await createNotificationInDb({
       userId: recipe.author.id,
       actorId: viewerId,
@@ -1205,6 +1207,9 @@ export async function updateBrewLogInDb(input: {
   visibility: Visibility;
 }) {
   const viewerId = await ensureCurrentIdentity();
+  const existing = await db.query.brewLogs.findFirst({
+    where: and(eq(brewLogsTable.id, input.id), eq(brewLogsTable.ownerId, viewerId))
+  });
   const recipe = input.recipeId ? await getRecipeByIdFromDb(input.recipeId) : null;
   const coffee = input.coffeeId
     ? await getCoffeeByIdFromDb(input.coffeeId)
@@ -1239,14 +1244,26 @@ export async function updateBrewLogInDb(input: {
     throw new Error("Brew log not found");
   }
 
+  await Promise.all(
+    [...new Set([existing?.recipeId, input.recipeId].filter(Boolean) as string[])].map((recipeId) =>
+      refreshRecipeStatsInDb(recipeId)
+    )
+  );
+
   return updated;
 }
 
 export async function deleteBrewLogInDb(id: string) {
   const viewerId = await ensureCurrentIdentity();
+  const existing = await db.query.brewLogs.findFirst({
+    where: and(eq(brewLogsTable.id, id), eq(brewLogsTable.ownerId, viewerId))
+  });
   await db
     .delete(brewLogsTable)
     .where(and(eq(brewLogsTable.id, id), eq(brewLogsTable.ownerId, viewerId)));
+  if (existing?.recipeId) {
+    await refreshRecipeStatsInDb(existing.recipeId);
+  }
 }
 
 export async function updateProfileInDb(input: {
@@ -1287,6 +1304,9 @@ export async function updateProfileInDb(input: {
       weightUnit: existingProfile?.weightUnit ?? "grams",
       temperatureUnit: existingProfile?.temperatureUnit ?? "celsius",
       ratioStyle: existingProfile?.ratioStyle ?? "brew_ratio",
+      defaultGrinderId: existingProfile?.defaultGrinderId ?? null,
+      defaultDripperId: existingProfile?.defaultDripperId ?? null,
+      defaultFilterId: existingProfile?.defaultFilterId ?? null,
       favoriteMethods:
         input.favoriteMethods ??
         (existingProfile?.favoriteMethods as BrewMethod[] | undefined) ??
@@ -1754,6 +1774,9 @@ export async function addReactionInDb(input: { targetType: SocialTargetType; tar
     .returning({ id: reactions.id });
 
   if (created) {
+    if (input.targetType === "recipe") {
+      await refreshRecipeStatsInDb(input.targetId);
+    }
     const target = await getNotificationTargetContext(input);
     if (target) {
       await createNotificationInDb({
@@ -1784,6 +1807,9 @@ export async function saveTargetInDb(input: { targetType: SocialTargetType; targ
     .returning({ id: saves.id });
 
   if (created) {
+    if (input.targetType === "recipe") {
+      await refreshRecipeStatsInDb(input.targetId);
+    }
     const target = await getNotificationTargetContext(input);
     if (target) {
       await createNotificationInDb({
@@ -1845,6 +1871,10 @@ export async function createCommentInDb(input: {
     body: input.body
   });
 
+  if (input.targetType === "recipe") {
+    await refreshRecipeStatsInDb(input.targetId);
+  }
+
   const target = await getNotificationTargetContext(input);
   if (target) {
     await createNotificationInDb({
@@ -1869,6 +1899,9 @@ export async function deleteCommentInDb(id: string) {
   }
 
   await db.delete(comments).where(or(eq(comments.id, id), eq(comments.parentId, id)));
+  if (comment.targetType === "recipe") {
+    await refreshRecipeStatsInDb(comment.targetId);
+  }
 }
 
 export async function getConversationsFromDb(): Promise<Conversation[]> {
@@ -2443,6 +2476,9 @@ function mapProfile(row: DbProfile): UserProfile {
     temperatureUnit: row.temperatureUnit ?? "celsius",
     ratioStyle: row.ratioStyle ?? "brew_ratio",
     favoriteMethods: row.favoriteMethods as BrewMethod[],
+    defaultGrinderId: row.defaultGrinderId ?? undefined,
+    defaultDripperId: row.defaultDripperId ?? undefined,
+    defaultFilterId: row.defaultFilterId ?? undefined,
     stats: {
       recipes: 0,
       brewLogs: 0,
@@ -2451,6 +2487,50 @@ function mapProfile(row: DbProfile): UserProfile {
       totalRecipeBrews: 0
     }
   };
+}
+
+export async function backfillRecipeStatsInDb() {
+  const rows = await db.select({ id: recipesTable.id }).from(recipesTable);
+  await Promise.all(rows.map((row) => refreshRecipeStatsInDb(row.id)));
+}
+
+async function refreshRecipeStatsInDb(recipeId: string) {
+  const [likesRows, savesRows, commentsRows, brewRows, remixRows] = await Promise.all([
+    db
+      .select({ id: reactions.id })
+      .from(reactions)
+      .where(and(eq(reactions.targetType, "recipe"), eq(reactions.targetId, recipeId))),
+    db
+      .select({ id: saves.id })
+      .from(saves)
+      .where(and(eq(saves.targetType, "recipe"), eq(saves.targetId, recipeId))),
+    db
+      .select({ id: comments.id })
+      .from(comments)
+      .where(and(eq(comments.targetType, "recipe"), eq(comments.targetId, recipeId))),
+    db
+      .select({ rating: brewLogsTable.rating })
+      .from(brewLogsTable)
+      .where(eq(brewLogsTable.recipeId, recipeId)),
+    db
+      .select({ id: recipesTable.id })
+      .from(recipesTable)
+      .where(eq(recipesTable.parentRecipeId, recipeId))
+  ]);
+
+  await db
+    .update(recipesTable)
+    .set({
+      stats: calculateRecipeStats({
+        likes: likesRows.length,
+        saves: savesRows.length,
+        comments: commentsRows.length,
+        brews: brewRows,
+        remixes: remixRows.length
+      }),
+      updatedAt: new Date()
+    })
+    .where(eq(recipesTable.id, recipeId));
 }
 
 function mapCoffee(row: DbCoffee): CoffeeBean {

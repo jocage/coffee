@@ -37,6 +37,9 @@ export type UserProfile = {
   temperatureUnit: TemperatureUnit;
   ratioStyle: RatioStyle;
   favoriteMethods: BrewMethod[];
+  defaultGrinderId?: string;
+  defaultDripperId?: string;
+  defaultFilterId?: string;
   stats: {
     recipes: number;
     brewLogs: number;
