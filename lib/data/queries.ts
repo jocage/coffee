@@ -48,6 +48,7 @@ import type {
 } from "@/lib/domain";
 import { recipes as seedRecipes } from "@/lib/data/seed";
 import { canReadVisibility } from "@/lib/permissions/visibility";
+import { filterRecipesForSetup, sortRecipesForSetup } from "@/modules/recipes/recommendations";
 
 export async function getCurrentUser() {
   noStore();
@@ -101,9 +102,20 @@ export async function searchRecipes(filters: {
   query?: string;
   method?: BrewMethod;
   visibility?: Visibility | "all";
+  compatible?: boolean;
+  prioritizeCompatible?: boolean;
 }) {
   noStore();
-  return getRecipesFromDb(filters);
+  const recipes = await getRecipesFromDb(filters);
+  if (!filters.compatible && !filters.prioritizeCompatible) {
+    return recipes;
+  }
+
+  const viewer = await getCurrentUser();
+  const gear = await getGearFromDb({ ownerId: viewer.id });
+  return filters.compatible
+    ? filterRecipesForSetup(recipes, viewer, gear)
+    : sortRecipesForSetup(recipes, viewer, gear);
 }
 
 export async function getMyRecipes(filters?: { query?: string; visibility?: Visibility | "all" }) {
@@ -178,8 +190,12 @@ export async function getProfileContent(handle?: string) {
   const [recipes, brewLogs, gear, coffees] = await Promise.all([
     getRecipesFromDb({ ownerId: profile.id }),
     getBrewLogsFromDb({ ownerId: profile.id }),
-    profile.showGearOnProfile || isOwnProfile ? getGearFromDb({ ownerId: profile.id }) : Promise.resolve([]),
-    profile.showCoffeeOnProfile || isOwnProfile ? getCoffeesFromDb({ ownerId: profile.id }) : Promise.resolve([])
+    profile.showGearOnProfile || isOwnProfile
+      ? getGearFromDb({ ownerId: profile.id })
+      : Promise.resolve([]),
+    profile.showCoffeeOnProfile || isOwnProfile
+      ? getCoffeesFromDb({ ownerId: profile.id })
+      : Promise.resolve([])
   ]);
 
   return {
