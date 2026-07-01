@@ -27,7 +27,7 @@ export function getRecipeSetupMatch(
     reasons.push("default-method-gear");
   }
 
-  if (hasDefaultGearForMethod(recipe.method, profile, gear)) {
+  if (hasDefaultGearForRecipe(recipe, profile, gear)) {
     score += 3;
     reasons.push("profile-default-gear");
   }
@@ -70,7 +70,7 @@ export function filterRecipesForSetup(
   );
 }
 
-function hasDefaultGearForMethod(method: Recipe["method"], profile: UserProfile, gear: GearItem[]) {
+function hasDefaultGearForRecipe(recipe: Recipe, profile: UserProfile, gear: GearItem[]) {
   const defaultIds = [
     profile.defaultGrinderId,
     profile.defaultDripperId,
@@ -84,13 +84,16 @@ function hasDefaultGearForMethod(method: Recipe["method"], profile: UserProfile,
   const hasGrinder = defaultGear.some((item) => item.type === "grinder");
   const hasFilter = defaultGear.some((item) => item.type === "filter");
   const hasDripper = defaultGear.some((item) => item.type === "dripper");
+  const recipeGearTypes = new Set(recipe.gear.map((item) => item.type));
 
-  if (method === "Espresso") {
+  if (recipe.method === "Espresso") {
     return hasGrinder;
   }
 
-  if (POUR_OVER_METHODS.has(method)) {
-    return hasGrinder && (hasDripper || hasFilter);
+  if (POUR_OVER_METHODS.has(recipe.method)) {
+    const recipeUsesDripper = recipeGearTypes.size === 0 || recipeGearTypes.has("dripper");
+    const recipeUsesFilter = recipeGearTypes.has("filter");
+    return hasGrinder && (!recipeUsesDripper || hasDripper) && (!recipeUsesFilter || hasFilter);
   }
 
   return hasGrinder || hasDripper || hasFilter;

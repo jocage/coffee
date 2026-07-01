@@ -258,9 +258,17 @@ export type Challenge = {
 export type Conversation = {
   id: string;
   participant: UserProfile;
+  messages: ConversationMessage[];
   lastMessage: string;
   unreadCount: number;
   updatedAt: string;
+};
+
+export type ConversationMessage = {
+  id: string;
+  senderId: string;
+  body: string;
+  createdAt: string;
 };
 
 export type Notification = {

@@ -1,9 +1,28 @@
-import { index, integer, jsonb, pgEnum, pgTable, real, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  index,
+  integer,
+  jsonb,
+  pgEnum,
+  pgTable,
+  real,
+  text,
+  timestamp,
+  uniqueIndex
+} from "drizzle-orm/pg-core";
 import { user } from "@/db/schema/auth";
 import { coffeeBeans } from "@/db/schema/coffee";
+import { gearItems } from "@/db/schema/gear";
 import { visibilityEnum } from "@/db/schema/profiles";
 
-export const brewMethodEnum = pgEnum("brew_method", ["V60", "Origami", "Kalita", "AeroPress", "Espresso", "French Press", "Switch"]);
+export const brewMethodEnum = pgEnum("brew_method", [
+  "V60",
+  "Origami",
+  "Kalita",
+  "AeroPress",
+  "Espresso",
+  "French Press",
+  "Switch"
+]);
 export const remixPolicyEnum = pgEnum("remix_policy", ["none", "with_credit", "ask_permission"]);
 export const commentPolicyEnum = pgEnum("comment_policy", ["disabled", "followers", "public"]);
 
@@ -11,7 +30,9 @@ export const recipes = pgTable(
   "recipes",
   {
     id: text("id").primaryKey(),
-    ownerId: text("owner_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
     coffeeId: text("coffee_id").references(() => coffeeBeans.id, { onDelete: "set null" }),
     parentRecipeId: text("parent_recipe_id"),
     slug: text("slug").notNull(),
@@ -34,21 +55,24 @@ export const recipes = pgTable(
     difficulty: text("difficulty").notNull().default("intermediate"),
     flavorNotes: jsonb("flavor_notes").$type<string[]>().notNull().default([]),
     tasteProfile: jsonb("taste_profile").$type<Record<string, number>>().notNull().default({}),
-    stats: jsonb("stats").$type<{
-      likes: number;
-      saves: number;
-      brews: number;
-      averageRating: number;
-      remixes: number;
-      comments: number;
-    }>().notNull().default({
-      likes: 0,
-      saves: 0,
-      brews: 0,
-      averageRating: 0,
-      remixes: 0,
-      comments: 0
-    }),
+    stats: jsonb("stats")
+      .$type<{
+        likes: number;
+        saves: number;
+        brews: number;
+        averageRating: number;
+        remixes: number;
+        comments: number;
+      }>()
+      .notNull()
+      .default({
+        likes: 0,
+        saves: 0,
+        brews: 0,
+        averageRating: 0,
+        remixes: 0,
+        comments: 0
+      }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },
@@ -62,7 +86,9 @@ export const recipeSteps = pgTable(
   "recipe_steps",
   {
     id: text("id").primaryKey(),
-    recipeId: text("recipe_id").notNull().references(() => recipes.id, { onDelete: "cascade" }),
+    recipeId: text("recipe_id")
+      .notNull()
+      .references(() => recipes.id, { onDelete: "cascade" }),
     position: integer("position").notNull(),
     label: text("label").notNull(),
     startsAtSeconds: integer("starts_at_seconds").notNull(),
@@ -74,5 +100,24 @@ export const recipeSteps = pgTable(
   },
   (table) => ({
     recipeIdx: index("recipe_steps_recipe_idx").on(table.recipeId)
+  })
+);
+
+export const recipeGearItems = pgTable(
+  "recipe_gear_items",
+  {
+    recipeId: text("recipe_id")
+      .notNull()
+      .references(() => recipes.id, { onDelete: "cascade" }),
+    gearId: text("gear_id")
+      .notNull()
+      .references(() => gearItems.id, { onDelete: "cascade" }),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => ({
+    recipeIdx: index("recipe_gear_items_recipe_idx").on(table.recipeId),
+    gearIdx: index("recipe_gear_items_gear_idx").on(table.gearId),
+    uniqueRecipeGear: uniqueIndex("recipe_gear_items_unique").on(table.recipeId, table.gearId)
   })
 );

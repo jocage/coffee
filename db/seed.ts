@@ -5,12 +5,20 @@ import { challenges, clubs } from "@/db/schema/clubs";
 import { coffeeBeans } from "@/db/schema/coffee";
 import { dripperCatalogItems, gearItems, grinderCatalogItems } from "@/db/schema/gear";
 import { profiles } from "@/db/schema/profiles";
-import { recipeSteps, recipes as recipesTable } from "@/db/schema/recipes";
+import { recipeGearItems, recipeSteps, recipes as recipesTable } from "@/db/schema/recipes";
+import {
+  directConversationParticipants,
+  directConversations,
+  directMessages,
+  follows
+} from "@/db/schema/social";
 import {
   brewLogs as seedBrewLogs,
   challenges as seedChallenges,
   clubs as seedClubs,
   coffees as seedCoffees,
+  conversations as seedConversations,
+  creators as seedCreators,
   currentUser,
   dripperCatalog as seedDripperCatalog,
   gear as seedGear,
@@ -50,6 +58,9 @@ async function main() {
       weightUnit: currentUser.weightUnit,
       temperatureUnit: currentUser.temperatureUnit,
       ratioStyle: currentUser.ratioStyle,
+      defaultGrinderId: currentUser.defaultGrinderId,
+      defaultDripperId: currentUser.defaultDripperId,
+      defaultFilterId: currentUser.defaultFilterId,
       favoriteMethods: currentUser.favoriteMethods
     })
     .onConflictDoUpdate({
@@ -69,9 +80,59 @@ async function main() {
         weightUnit: currentUser.weightUnit,
         temperatureUnit: currentUser.temperatureUnit,
         ratioStyle: currentUser.ratioStyle,
+        defaultGrinderId: currentUser.defaultGrinderId,
+        defaultDripperId: currentUser.defaultDripperId,
+        defaultFilterId: currentUser.defaultFilterId,
         favoriteMethods: currentUser.favoriteMethods
       }
     });
+
+  const otherCreators = seedCreators.filter((creator) => creator.id !== currentUser.id);
+  if (otherCreators.length > 0) {
+    await db
+      .insert(user)
+      .values(
+        otherCreators.map((creator) => ({
+          id: creator.id,
+          name: creator.displayName,
+          email: `${creator.handle}@coffee-journey.local`,
+          emailVerified: true,
+          image: creator.avatarUrl
+        }))
+      )
+      .onConflictDoNothing();
+
+    await db
+      .insert(profiles)
+      .values(
+        otherCreators.map((creator) => ({
+          id: `profile_${creator.handle}`,
+          userId: creator.id,
+          handle: creator.handle,
+          displayName: creator.displayName,
+          bio: creator.bio,
+          location: creator.location,
+          website: creator.website,
+          avatarUrl: creator.avatarUrl,
+          coverUrl: creator.coverUrl,
+          defaultVisibility: creator.defaultVisibility,
+          defaultCommentPolicy: creator.defaultCommentPolicy,
+          messagePolicy: creator.messagePolicy,
+          showGearOnProfile: creator.showGearOnProfile,
+          showCoffeeOnProfile: creator.showCoffeeOnProfile,
+          weightUnit: creator.weightUnit,
+          temperatureUnit: creator.temperatureUnit,
+          ratioStyle: creator.ratioStyle,
+          favoriteMethods: creator.favoriteMethods
+        }))
+      )
+      .onConflictDoNothing();
+  }
+
+  await db
+    .insert(follows)
+    .values({ followerId: "dev-user", followingId: "user_alex" })
+    .onConflictDoNothing();
 
   await db
     .insert(coffeeBeans)
@@ -194,6 +255,65 @@ async function main() {
           cumulativeWaterGrams: step.cumulativeWaterGrams,
           instruction: step.instruction,
           cue: step.cue
+        }))
+      )
+    )
+    .onConflictDoNothing();
+
+  await db
+    .insert(recipeGearItems)
+    .values(
+      seedRecipes.flatMap((recipe) =>
+        recipe.gear.map((item, index) => ({
+          recipeId: recipe.id,
+          gearId: item.id,
+          position: index
+        }))
+      )
+    )
+    .onConflictDoNothing();
+
+  await db
+    .insert(directConversations)
+    .values(
+      seedConversations.map((conversation) => ({
+        id: conversation.id,
+        updatedAt: new Date(conversation.updatedAt)
+      }))
+    )
+    .onConflictDoNothing();
+
+  await db
+    .insert(directConversationParticipants)
+    .values(
+      seedConversations.flatMap((conversation) => [
+        {
+          conversationId: conversation.id,
+          userId: "dev-user",
+          unreadCount: conversation.unreadCount
+        },
+        {
+          conversationId: conversation.id,
+          userId:
+            conversation.participant.id === currentUser.id
+              ? "dev-user"
+              : conversation.participant.id,
+          unreadCount: 0
+        }
+      ])
+    )
+    .onConflictDoNothing();
+
+  await db
+    .insert(directMessages)
+    .values(
+      seedConversations.flatMap((conversation) =>
+        conversation.messages.map((message) => ({
+          id: message.id,
+          conversationId: conversation.id,
+          senderId: message.senderId === currentUser.id ? "dev-user" : message.senderId,
+          body: message.body,
+          createdAt: new Date(message.createdAt)
         }))
       )
     )

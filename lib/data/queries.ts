@@ -282,6 +282,12 @@ export async function getGear() {
   return getGearFromDb();
 }
 
+export async function getMyGear() {
+  noStore();
+  const user = await getCurrentUser();
+  return getGearFromDb({ ownerId: user.id });
+}
+
 export async function getGearItemById(id: string) {
   noStore();
   return getGearItemByIdFromDb(id);

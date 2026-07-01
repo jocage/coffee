@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, desc, eq, ilike, inArray, ne, or } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, ne, or, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { db } from "@/db";
 import { user } from "@/db/schema/auth";
@@ -15,7 +15,7 @@ import {
 } from "@/db/schema/clubs";
 import { dripperCatalogItems, gearItems, grinderCatalogItems } from "@/db/schema/gear";
 import { profiles } from "@/db/schema/profiles";
-import { recipeSteps, recipes as recipesTable } from "@/db/schema/recipes";
+import { recipeGearItems, recipeSteps, recipes as recipesTable } from "@/db/schema/recipes";
 import {
   comments,
   contentReports,
@@ -33,6 +33,7 @@ import {
   clubs as seedClubs,
   coffees as seedCoffees,
   conversations as seedConversations,
+  creators as seedCreators,
   currentUser as seedCurrentUser,
   dripperCatalog as seedDripperCatalog,
   gear as seedGear,
@@ -50,6 +51,7 @@ import type {
   CommentPolicy,
   ContentReport,
   Conversation,
+  ConversationMessage,
   BrewMethod,
   CoffeeBean,
   DripperCatalogItem,
@@ -195,7 +197,7 @@ export async function getRecipesFromDb(filters?: {
     }
 
     const steps = await getStepsForRecipes(rows.map((row) => row.recipe.id));
-    const gear = await getGearFromDb();
+    const gearByRecipeId = await getGearForRecipeIds(rows.map((row) => row.recipe.id));
 
     return rows.map((row) =>
       mapRecipe(
@@ -203,7 +205,7 @@ export async function getRecipesFromDb(filters?: {
         row.profile,
         row.coffee ?? seedCoffees[0],
         steps.get(row.recipe.id) ?? [],
-        gear
+        gearByRecipeId.get(row.recipe.id) ?? []
       )
     );
   }, seedRecipes);
@@ -251,13 +253,13 @@ export async function getPublicRecipeFromDb(handle: string, slug: string): Promi
       }
 
       const steps = await getStepsForRecipes([row.recipe.id]);
-      const gear = await getGearFromDb();
+      const gearByRecipeId = await getGearForRecipeIds([row.recipe.id]);
       return mapRecipe(
         row.recipe,
         row.profile,
         row.coffee ?? seedCoffees[0],
         steps.get(row.recipe.id) ?? [],
-        gear
+        gearByRecipeId.get(row.recipe.id) ?? []
       );
     },
     seedRecipes.find((recipe) => recipe.author.handle === handle && recipe.slug === slug) ?? null
@@ -656,12 +658,18 @@ export async function getBrewLogsFromDb(filters?: { ownerId?: string }): Promise
 
     const recipeIds = rows.flatMap((row) => (row.recipe ? [row.recipe.id] : []));
     const steps = await getStepsForRecipes(recipeIds);
-    const gear = await getGearFromDb();
+    const gearByRecipeId = await getGearForRecipeIds(recipeIds);
 
     return rows.map((row) => {
       const coffee = row.coffee ?? seedCoffees[0];
       const recipe = row.recipe
-        ? mapRecipe(row.recipe, row.profile, coffee, steps.get(row.recipe.id) ?? [], gear)
+        ? mapRecipe(
+            row.recipe,
+            row.profile,
+            coffee,
+            steps.get(row.recipe.id) ?? [],
+            gearByRecipeId.get(row.recipe.id) ?? []
+          )
         : undefined;
       return mapBrewLog(row.brewLog, row.profile, recipe, coffee);
     });
@@ -692,10 +700,18 @@ export async function getBrewLogByIdFromDb(id: string): Promise<BrewLog | null> 
       const steps = row[0].recipe
         ? await getStepsForRecipes([row[0].recipe.id])
         : new Map<string, RecipeStep[]>();
-      const gear = await getGearFromDb();
+      const gearByRecipeId = row[0].recipe
+        ? await getGearForRecipeIds([row[0].recipe.id])
+        : new Map<string, GearItem[]>();
       const coffee = row[0].coffee ?? seedCoffees[0];
       const recipe = row[0].recipe
-        ? mapRecipe(row[0].recipe, row[0].profile, coffee, steps.get(row[0].recipe.id) ?? [], gear)
+        ? mapRecipe(
+            row[0].recipe,
+            row[0].profile,
+            coffee,
+            steps.get(row[0].recipe.id) ?? [],
+            gearByRecipeId.get(row[0].recipe.id) ?? []
+          )
         : undefined;
       return mapBrewLog(row[0].brewLog, row[0].profile, recipe, coffee);
     },
@@ -989,6 +1005,8 @@ export async function createRecipeInDb(input: {
     }))
   );
 
+  await syncRecipeGearForSetup(recipeId, viewerId, input.method);
+
   return { id: recipeId, slug };
 }
 
@@ -1061,6 +1079,8 @@ export async function updateRecipeInDb(input: {
     }))
   );
 
+  await syncRecipeGearForSetup(input.id, viewerId, input.method);
+
   return updated;
 }
 
@@ -1129,6 +1149,11 @@ export async function createRecipeRemixInDb(recipeId: string) {
         cue: step.cue
       }))
     );
+  }
+
+  const copiedGear = await copyRecipeGearItems(source.id, remixId);
+  if (!copiedGear) {
+    await syncRecipeGearForSetup(remixId, viewerId, source.method);
   }
 
   await db
@@ -1317,12 +1342,40 @@ export async function updateProfileInDb(input: {
   coverUrl?: string;
   coverAssetId?: string;
   defaultVisibility?: Visibility;
+  defaultGrinderId?: string | null;
+  defaultDripperId?: string | null;
+  defaultFilterId?: string | null;
   favoriteMethods?: BrewMethod[];
 }) {
   const viewerId = await ensureCurrentIdentity();
   const existingProfile = await db.query.profiles.findFirst({
     where: eq(profiles.userId, viewerId)
   });
+  const requestedDefaultGearIds = [
+    input.defaultGrinderId,
+    input.defaultDripperId,
+    input.defaultFilterId
+  ].filter((id): id is string => typeof id === "string" && id.length > 0);
+  const defaultGearRows =
+    requestedDefaultGearIds.length > 0
+      ? await db.query.gearItems.findMany({
+          where: and(
+            eq(gearItems.ownerId, viewerId),
+            inArray(gearItems.id, requestedDefaultGearIds)
+          )
+        })
+      : [];
+  const defaultGearById = new Map(defaultGearRows.map((item) => [item.id, item]));
+  const resolveDefaultGearId = (id: string | null | undefined, type: GearType) => {
+    if (!id) {
+      return null;
+    }
+    const item = defaultGearById.get(id);
+    if (!item || item.type !== type) {
+      throw new Error("Selected default gear is not available");
+    }
+    return id;
+  };
 
   await db
     .update(profiles)
@@ -1344,9 +1397,18 @@ export async function updateProfileInDb(input: {
       weightUnit: existingProfile?.weightUnit ?? "grams",
       temperatureUnit: existingProfile?.temperatureUnit ?? "celsius",
       ratioStyle: existingProfile?.ratioStyle ?? "brew_ratio",
-      defaultGrinderId: existingProfile?.defaultGrinderId ?? null,
-      defaultDripperId: existingProfile?.defaultDripperId ?? null,
-      defaultFilterId: existingProfile?.defaultFilterId ?? null,
+      defaultGrinderId:
+        input.defaultGrinderId === undefined
+          ? (existingProfile?.defaultGrinderId ?? null)
+          : resolveDefaultGearId(input.defaultGrinderId, "grinder"),
+      defaultDripperId:
+        input.defaultDripperId === undefined
+          ? (existingProfile?.defaultDripperId ?? null)
+          : resolveDefaultGearId(input.defaultDripperId, "dripper"),
+      defaultFilterId:
+        input.defaultFilterId === undefined
+          ? (existingProfile?.defaultFilterId ?? null)
+          : resolveDefaultGearId(input.defaultFilterId, "filter"),
       favoriteMethods:
         input.favoriteMethods ??
         (existingProfile?.favoriteMethods as BrewMethod[] | undefined) ??
@@ -1953,7 +2015,10 @@ export async function getConversationsFromDb(): Promise<Conversation[]> {
   return withSeedFallback(async () => {
     const viewerId = await ensureCurrentIdentity();
     const rows = await db
-      .select({ conversation: directConversations })
+      .select({
+        conversation: directConversations,
+        unreadCount: directConversationParticipants.unreadCount
+      })
       .from(directConversations)
       .innerJoin(
         directConversationParticipants,
@@ -1967,20 +2032,51 @@ export async function getConversationsFromDb(): Promise<Conversation[]> {
     }
 
     const conversationIds = rows.map((row) => row.conversation.id);
-    const messages = await db.query.directMessages.findMany({
-      where: inArray(directMessages.conversationId, conversationIds),
-      orderBy: (table, { desc }) => [desc(table.createdAt)]
-    });
+    const [messages, participants] = await Promise.all([
+      db.query.directMessages.findMany({
+        where: inArray(directMessages.conversationId, conversationIds),
+        orderBy: (table, { asc }) => [asc(table.createdAt)]
+      }),
+      db
+        .select({
+          conversationId: directConversationParticipants.conversationId,
+          profile: profiles
+        })
+        .from(directConversationParticipants)
+        .innerJoin(profiles, eq(directConversationParticipants.userId, profiles.userId))
+        .where(
+          and(
+            inArray(directConversationParticipants.conversationId, conversationIds),
+            ne(directConversationParticipants.userId, viewerId)
+          )
+        )
+    ]);
+    const messagesByConversation = messages.reduce((map, message) => {
+      const current = map.get(message.conversationId) ?? [];
+      current.push({
+        id: message.id,
+        senderId: message.senderId,
+        body: message.body,
+        createdAt: message.createdAt.toISOString()
+      });
+      map.set(message.conversationId, current);
+      return map;
+    }, new Map<string, ConversationMessage[]>());
+    const participantByConversation = new Map(
+      participants.map((row) => [row.conversationId, mapProfile(row.profile)])
+    );
 
     return rows.map((row, index) => {
       const fallback = seedConversations[index] ?? seedConversations[0];
-      const lastMessage = messages.find(
-        (message) => message.conversationId === row.conversation.id
-      );
+      const conversationMessages = messagesByConversation.get(row.conversation.id) ?? [];
+      const lastMessage = conversationMessages.at(-1);
       return {
         ...fallback,
         id: row.conversation.id,
+        participant: participantByConversation.get(row.conversation.id) ?? fallback.participant,
+        messages: conversationMessages.length > 0 ? conversationMessages : fallback.messages,
         lastMessage: lastMessage?.body ?? fallback.lastMessage,
+        unreadCount: row.unreadCount,
         updatedAt: row.conversation.updatedAt.toISOString()
       };
     });
@@ -1988,30 +2084,51 @@ export async function getConversationsFromDb(): Promise<Conversation[]> {
 }
 
 export async function getConversationByIdFromDb(id: string): Promise<Conversation | null> {
-  const conversations = await getConversationsFromDb();
-  return conversations.find((conversation) => conversation.id === id) ?? null;
+  const viewerId = await ensureCurrentIdentity();
+  const conversation = (await getConversationsFromDb()).find((item) => item.id === id) ?? null;
+  if (!conversation) {
+    return null;
+  }
+
+  await db
+    .update(directConversationParticipants)
+    .set({ unreadCount: 0 })
+    .where(
+      and(
+        eq(directConversationParticipants.conversationId, id),
+        eq(directConversationParticipants.userId, viewerId)
+      )
+    );
+  return { ...conversation, unreadCount: 0 };
 }
 
 export async function sendMessageInDb(input: { conversationId: string; body: string }) {
   const viewerId = await ensureCurrentIdentity();
-  await db
-    .insert(directConversations)
-    .values({
-      id: input.conversationId
-    })
-    .onConflictDoUpdate({
-      target: directConversations.id,
-      set: { updatedAt: new Date() }
-    });
+  const participant = await db.query.directConversationParticipants.findFirst({
+    where: and(
+      eq(directConversationParticipants.conversationId, input.conversationId),
+      eq(directConversationParticipants.userId, viewerId)
+    )
+  });
 
-  await db
-    .insert(directConversationParticipants)
-    .values({
-      conversationId: input.conversationId,
-      userId: viewerId,
-      unreadCount: 0
-    })
-    .onConflictDoNothing();
+  if (!participant) {
+    throw new Error("Conversation not found");
+  }
+
+  const recipients = await db
+    .select({ profile: profiles })
+    .from(directConversationParticipants)
+    .innerJoin(profiles, eq(directConversationParticipants.userId, profiles.userId))
+    .where(
+      and(
+        eq(directConversationParticipants.conversationId, input.conversationId),
+        ne(directConversationParticipants.userId, viewerId)
+      )
+    );
+  await assertCanMessageProfiles(
+    viewerId,
+    recipients.map((row) => row.profile)
+  );
 
   await db.insert(directMessages).values({
     id: crypto.randomUUID(),
@@ -2019,6 +2136,84 @@ export async function sendMessageInDb(input: { conversationId: string; body: str
     senderId: viewerId,
     body: input.body
   });
+
+  await db
+    .update(directConversationParticipants)
+    .set({
+      unreadCount: sql`${directConversationParticipants.unreadCount} + 1`
+    })
+    .where(
+      and(
+        eq(directConversationParticipants.conversationId, input.conversationId),
+        ne(directConversationParticipants.userId, viewerId)
+      )
+    );
+
+  await db
+    .update(directConversations)
+    .set({ updatedAt: new Date() })
+    .where(eq(directConversations.id, input.conversationId));
+}
+
+export async function startConversationInDb(input: { recipientId: string; body: string }) {
+  const viewerId = await ensureCurrentIdentity();
+  if (input.recipientId === viewerId) {
+    throw new Error("Choose another recipient");
+  }
+
+  const recipient = await db.query.profiles.findFirst({
+    where: eq(profiles.userId, input.recipientId)
+  });
+  if (!recipient) {
+    throw new Error("Recipient not found");
+  }
+
+  await assertCanMessageProfiles(viewerId, [recipient]);
+
+  const viewerParticipantRows = await db.query.directConversationParticipants.findMany({
+    where: eq(directConversationParticipants.userId, viewerId)
+  });
+  const recipientParticipantRows = await db.query.directConversationParticipants.findMany({
+    where: eq(directConversationParticipants.userId, input.recipientId)
+  });
+  const viewerConversationIds = new Set(
+    viewerParticipantRows.map((participant) => participant.conversationId)
+  );
+  const existingConversationId = recipientParticipantRows.find((participant) =>
+    viewerConversationIds.has(participant.conversationId)
+  )?.conversationId;
+  const conversationId = existingConversationId ?? crypto.randomUUID();
+
+  if (!existingConversationId) {
+    await db.insert(directConversations).values({ id: conversationId });
+    await db.insert(directConversationParticipants).values([
+      { conversationId, userId: viewerId, unreadCount: 0 },
+      { conversationId, userId: input.recipientId, unreadCount: 0 }
+    ]);
+  }
+
+  await sendMessageInDb({
+    conversationId,
+    body: input.body
+  });
+
+  return { id: conversationId };
+}
+
+async function assertCanMessageProfiles(viewerId: string, recipients: DbProfile[]) {
+  if (recipients.length === 0) {
+    throw new Error("Recipient not found");
+  }
+
+  for (const recipient of recipients) {
+    const allowed =
+      recipient.messagePolicy === "public" ||
+      (recipient.messagePolicy === "followers" &&
+        (await isFollowingInDb(viewerId, recipient.userId)));
+    if (!allowed) {
+      throw new Error("Recipient does not accept messages");
+    }
+  }
 }
 
 export async function getNotificationsFromDb(): Promise<Notification[]> {
@@ -2224,6 +2419,9 @@ export async function ensureDevIdentity() {
       weightUnit: seedCurrentUser.weightUnit,
       temperatureUnit: seedCurrentUser.temperatureUnit,
       ratioStyle: seedCurrentUser.ratioStyle,
+      defaultGrinderId: seedCurrentUser.defaultGrinderId,
+      defaultDripperId: seedCurrentUser.defaultDripperId,
+      defaultFilterId: seedCurrentUser.defaultFilterId,
       favoriteMethods: seedCurrentUser.favoriteMethods
     })
     .onConflictDoNothing();
@@ -2237,6 +2435,53 @@ export async function ensureDevIdentity() {
 }
 
 async function seedE2eDemoData() {
+  const otherCreators = seedCreators.filter((creator) => creator.id !== seedCurrentUser.id);
+  if (otherCreators.length > 0) {
+    await db
+      .insert(user)
+      .values(
+        otherCreators.map((creator) => ({
+          id: creator.id,
+          name: creator.displayName,
+          email: `${creator.handle}@coffee-journey.local`,
+          emailVerified: true,
+          image: creator.avatarUrl
+        }))
+      )
+      .onConflictDoNothing();
+
+    await db
+      .insert(profiles)
+      .values(
+        otherCreators.map((creator) => ({
+          id: `profile_${creator.handle}`,
+          userId: creator.id,
+          handle: creator.handle,
+          displayName: creator.displayName,
+          bio: creator.bio,
+          location: creator.location,
+          website: creator.website,
+          avatarUrl: creator.avatarUrl,
+          coverUrl: creator.coverUrl,
+          defaultVisibility: creator.defaultVisibility,
+          defaultCommentPolicy: creator.defaultCommentPolicy,
+          messagePolicy: creator.messagePolicy,
+          showGearOnProfile: creator.showGearOnProfile,
+          showCoffeeOnProfile: creator.showCoffeeOnProfile,
+          weightUnit: creator.weightUnit,
+          temperatureUnit: creator.temperatureUnit,
+          ratioStyle: creator.ratioStyle,
+          favoriteMethods: creator.favoriteMethods
+        }))
+      )
+      .onConflictDoNothing();
+  }
+
+  await db
+    .insert(follows)
+    .values({ followerId: DEV_USER_ID, followingId: "user_alex" })
+    .onConflictDoNothing();
+
   await db
     .insert(coffeeBeans)
     .values(
@@ -2358,6 +2603,65 @@ async function seedE2eDemoData() {
           cumulativeWaterGrams: step.cumulativeWaterGrams,
           instruction: step.instruction,
           cue: step.cue
+        }))
+      )
+    )
+    .onConflictDoNothing();
+
+  await db
+    .insert(recipeGearItems)
+    .values(
+      seedRecipes.flatMap((recipe) =>
+        recipe.gear.map((item, index) => ({
+          recipeId: recipe.id,
+          gearId: item.id,
+          position: index
+        }))
+      )
+    )
+    .onConflictDoNothing();
+
+  await db
+    .insert(directConversations)
+    .values(
+      seedConversations.map((conversation) => ({
+        id: conversation.id,
+        updatedAt: new Date(conversation.updatedAt)
+      }))
+    )
+    .onConflictDoNothing();
+
+  await db
+    .insert(directConversationParticipants)
+    .values(
+      seedConversations.flatMap((conversation) => [
+        {
+          conversationId: conversation.id,
+          userId: DEV_USER_ID,
+          unreadCount: conversation.unreadCount
+        },
+        {
+          conversationId: conversation.id,
+          userId:
+            conversation.participant.id === seedCurrentUser.id
+              ? DEV_USER_ID
+              : conversation.participant.id,
+          unreadCount: 0
+        }
+      ])
+    )
+    .onConflictDoNothing();
+
+  await db
+    .insert(directMessages)
+    .values(
+      seedConversations.flatMap((conversation) =>
+        conversation.messages.map((message) => ({
+          id: message.id,
+          conversationId: conversation.id,
+          senderId: message.senderId === seedCurrentUser.id ? DEV_USER_ID : message.senderId,
+          body: message.body,
+          createdAt: new Date(message.createdAt)
         }))
       )
     )
@@ -2499,6 +2803,94 @@ async function getStepsForRecipes(recipeIds: string[]) {
     map.set(row.recipeId, current);
     return map;
   }, new Map<string, RecipeStep[]>());
+}
+
+async function getGearForRecipeIds(recipeIds: string[]) {
+  if (recipeIds.length === 0) {
+    return new Map<string, GearItem[]>();
+  }
+
+  const rows = await db
+    .select({
+      recipeId: recipeGearItems.recipeId,
+      gear: gearItems
+    })
+    .from(recipeGearItems)
+    .innerJoin(gearItems, eq(recipeGearItems.gearId, gearItems.id))
+    .where(inArray(recipeGearItems.recipeId, recipeIds))
+    .orderBy(asc(recipeGearItems.recipeId), asc(recipeGearItems.position));
+
+  return rows.reduce((map, row) => {
+    const current = map.get(row.recipeId) ?? [];
+    current.push(mapGear(row.gear));
+    map.set(row.recipeId, current);
+    return map;
+  }, new Map<string, GearItem[]>());
+}
+
+async function getDefaultRecipeGearIds(ownerId: string, method: BrewMethod) {
+  const profile = await db.query.profiles.findFirst({
+    where: eq(profiles.userId, ownerId)
+  });
+  const profileGearIds = [
+    profile?.defaultGrinderId,
+    profile?.defaultDripperId,
+    profile?.defaultFilterId
+  ].filter(Boolean) as string[];
+
+  const rows = await db.query.gearItems.findMany({
+    where: and(
+      eq(gearItems.ownerId, ownerId),
+      or(
+        eq(gearItems.defaultForMethod, method),
+        profileGearIds.length > 0 ? inArray(gearItems.id, profileGearIds) : undefined
+      )
+    ),
+    orderBy: asc(gearItems.createdAt)
+  });
+  const availableIds = new Set(rows.map((row) => row.id));
+
+  return [
+    ...profileGearIds.filter((id) => availableIds.has(id)),
+    ...rows.filter((row) => row.defaultForMethod === method).map((row) => row.id)
+  ].filter((id, index, ids) => ids.indexOf(id) === index);
+}
+
+async function syncRecipeGearForSetup(recipeId: string, ownerId: string, method: BrewMethod) {
+  const gearIds = await getDefaultRecipeGearIds(ownerId, method);
+
+  await db.delete(recipeGearItems).where(eq(recipeGearItems.recipeId, recipeId));
+  if (gearIds.length === 0) {
+    return;
+  }
+
+  await db.insert(recipeGearItems).values(
+    gearIds.map((gearId, index) => ({
+      recipeId,
+      gearId,
+      position: index
+    }))
+  );
+}
+
+async function copyRecipeGearItems(sourceRecipeId: string, targetRecipeId: string) {
+  const links = await db.query.recipeGearItems.findMany({
+    where: eq(recipeGearItems.recipeId, sourceRecipeId),
+    orderBy: asc(recipeGearItems.position)
+  });
+
+  if (links.length === 0) {
+    return false;
+  }
+
+  await db.insert(recipeGearItems).values(
+    links.map((link) => ({
+      recipeId: targetRecipeId,
+      gearId: link.gearId,
+      position: link.position
+    }))
+  );
+  return true;
 }
 
 function mapProfile(row: DbProfile): UserProfile {

@@ -14,6 +14,11 @@ export const handleSchema = z
   .max(24)
   .regex(/^[a-z0-9_]+$/i, "Handle can contain letters, numbers and underscores");
 
+const optionalGearIdSchema = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? null : value),
+  z.string().trim().min(1).nullable().optional()
+);
+
 export const profileInputSchema = z.object({
   displayName: z.string().trim().min(2).max(72),
   handle: handleSchema,
@@ -25,6 +30,9 @@ export const profileInputSchema = z.object({
   coverUrl: z.string().trim().optional(),
   coverAssetId: z.string().trim().optional(),
   defaultVisibility: visibilitySchema.default("private"),
+  defaultGrinderId: optionalGearIdSchema,
+  defaultDripperId: optionalGearIdSchema,
+  defaultFilterId: optionalGearIdSchema,
   favoriteMethods: z.array(brewMethodSchema).default([])
 });
 

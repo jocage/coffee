@@ -17,3 +17,9 @@ export const sendMessageInputSchema = z.object({
   body: z.string().trim().min(1).max(1200),
   path: z.string().min(1).default("/messages")
 });
+
+export const startConversationInputSchema = z.object({
+  recipientId: z.string().min(1),
+  body: z.string().trim().min(1).max(1200),
+  path: z.string().min(1).default("/messages")
+});

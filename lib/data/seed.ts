@@ -33,6 +33,8 @@ export const currentUser: UserProfile = {
   weightUnit: "grams",
   temperatureUnit: "celsius",
   ratioStyle: "brew_ratio",
+  defaultGrinderId: "gear_c40",
+  defaultDripperId: "gear_v60",
   favoriteMethods: ["V60", "Origami", "Kalita"],
   stats: {
     recipes: 128,
@@ -836,6 +838,14 @@ export const conversations: Conversation[] = [
   {
     id: "conversation_alex",
     participant: creators[1],
+    messages: [
+      {
+        id: "message_alex_setup",
+        senderId: creators[1].id,
+        body: "Try the same pour structure with 92C and a slightly finer grind.",
+        createdAt: "2026-06-10T14:20:00.000Z"
+      }
+    ],
     lastMessage: "Try the same pour structure with 92C and a slightly finer grind.",
     unreadCount: 2,
     updatedAt: "2026-06-10T14:20:00.000Z"
@@ -843,6 +853,14 @@ export const conversations: Conversation[] = [
   {
     id: "conversation_tetsu",
     participant: currentUser,
+    messages: [
+      {
+        id: "message_tetsu_saved",
+        senderId: currentUser.id,
+        body: "Saved your recipe for tomorrow's comparison brew.",
+        createdAt: "2026-06-09T18:05:00.000Z"
+      }
+    ],
     lastMessage: "Saved your recipe for tomorrow's comparison brew.",
     unreadCount: 0,
     updatedAt: "2026-06-09T18:05:00.000Z"

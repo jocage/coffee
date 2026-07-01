@@ -17,7 +17,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<u
     return NextResponse.redirect(new URL(`/messages/${id}?error=message`, request.url), 303);
   }
 
-  await sendMessageInDb(parsed.data);
+  try {
+    await sendMessageInDb(parsed.data);
+  } catch {
+    return NextResponse.redirect(new URL(`/messages/${id}?error=message`, request.url), 303);
+  }
+
   revalidatePath("/messages");
   revalidatePath(`/messages/${id}`);
 

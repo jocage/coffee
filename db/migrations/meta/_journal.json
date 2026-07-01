@@ -85,6 +85,13 @@
       "when": 1782748800000,
       "tag": "0011_default_profile_setup",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1782921600000,
+      "tag": "0012_recipe_gear_items",
+      "breakpoints": true
     }
   ]
 }

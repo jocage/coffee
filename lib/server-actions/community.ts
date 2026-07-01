@@ -2,9 +2,20 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { enterChallengeInDb, joinClubInDb, markNotificationsReadInDb, sendMessageInDb } from "@/lib/data/repositories";
+import {
+  enterChallengeInDb,
+  joinClubInDb,
+  markNotificationsReadInDb,
+  sendMessageInDb,
+  startConversationInDb
+} from "@/lib/data/repositories";
 import { formDataToObject } from "@/lib/server-actions/result";
-import { challengeEntryInputSchema, joinClubInputSchema, sendMessageInputSchema } from "@/lib/validators/community";
+import {
+  challengeEntryInputSchema,
+  joinClubInputSchema,
+  sendMessageInputSchema,
+  startConversationInputSchema
+} from "@/lib/validators/community";
 
 export async function joinClubAction(formData: FormData): Promise<void> {
   const parsed = joinClubInputSchema.safeParse(formDataToObject(formData));
@@ -33,6 +44,15 @@ export async function sendMessageAction(formData: FormData): Promise<void> {
   revalidatePath("/messages");
   revalidatePath(parsed.data.path);
   redirect(withSearchParam(parsed.data.path, "sent", "1"));
+}
+
+export async function startConversationAction(formData: FormData): Promise<void> {
+  const parsed = startConversationInputSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success) throw new Error("Conversation could not be started");
+
+  const conversation = await startConversationInDb(parsed.data);
+  revalidatePath("/messages");
+  redirect(`/messages/${conversation.id}?sent=1`);
 }
 
 export async function markNotificationsReadAction(): Promise<void> {
