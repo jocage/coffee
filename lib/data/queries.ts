@@ -24,6 +24,9 @@ import {
   getGrinderCatalogFromDb,
   getGrinderCatalogItemByIdFromDb,
   getNotificationsFromDb,
+  getOptionalViewerFromDb,
+  getOwnedBrewLogByIdFromDb,
+  getOwnedRecipeByIdFromDb,
   getProfileFromDb,
   getProfilesFromDb,
   getPublicCollectionFromDb,
@@ -32,7 +35,8 @@ import {
   getRecipesFromDb,
   getSavedRecipesFromDb,
   getSocialCountsForTargetFromDb,
-  getViewerFromDb
+  getViewerFromDb,
+  isFollowingInDb
 } from "@/lib/data/repositories";
 import type {
   BrewLog,
@@ -157,7 +161,17 @@ export async function getPreviewRecipe(): Promise<Recipe> {
 
 export async function getRecipeById(id: string) {
   noStore();
-  return getRecipeByIdFromDb(id);
+  const recipe = await getRecipeByIdFromDb(id);
+  if (!recipe) {
+    return null;
+  }
+
+  return (await canViewerReadContent(recipe.visibility, recipe.author.id)) ? recipe : null;
+}
+
+export async function getOwnedRecipeById(id: string) {
+  noStore();
+  return getOwnedRecipeByIdFromDb(id);
 }
 
 export async function getPublicRecipe(handle: string, slug: string): Promise<Recipe | null> {
@@ -186,6 +200,8 @@ export async function getProfileContent(handle?: string) {
     return null;
   }
   const isOwnProfile = !handle;
+  const viewer = isOwnProfile ? profile : await getOptionalViewerFromDb();
+  const isFollower = viewer ? await isFollowingInDb(viewer.id, profile.id) : false;
 
   const [recipes, brewLogs, gear, coffees] = await Promise.all([
     getRecipesFromDb({ ownerId: profile.id }),
@@ -200,8 +216,24 @@ export async function getProfileContent(handle?: string) {
 
   return {
     profile,
-    recipes,
-    brewLogs,
+    recipes: isOwnProfile
+      ? recipes
+      : recipes.filter((recipe) =>
+          canReadVisibility(recipe.visibility, {
+            ownerId: recipe.author.id,
+            viewer,
+            isFollower
+          })
+        ),
+    brewLogs: isOwnProfile
+      ? brewLogs
+      : brewLogs.filter((brewLog) =>
+          canReadVisibility(brewLog.visibility, {
+            ownerId: brewLog.author.id,
+            viewer,
+            isFollower
+          })
+        ),
     gear,
     coffees
   };
@@ -230,7 +262,7 @@ export async function getPublicCoffeeContent(slug: string): Promise<{
   ]);
   const coffee = coffees.find((item) => item.slug === slug || item.id === slug);
 
-  if (!coffee) {
+  if (!coffee || !isPubliclyAddressable(coffee.visibility)) {
     return null;
   }
 
@@ -294,7 +326,7 @@ export async function getPublicGearContent(slug: string): Promise<{
   ]);
   const gear = gearItems.find((item) => item.id === slug || slugifyGear(item) === slug);
 
-  if (!gear) {
+  if (!gear || !isPubliclyAddressable(gear.visibility)) {
     return null;
   }
 
@@ -336,7 +368,17 @@ export async function getBrewLogs() {
 
 export async function getBrewLogById(id: string) {
   noStore();
-  return getBrewLogByIdFromDb(id);
+  const brewLog = await getBrewLogByIdFromDb(id);
+  if (!brewLog) {
+    return null;
+  }
+
+  return (await canViewerReadContent(brewLog.visibility, brewLog.author.id)) ? brewLog : null;
+}
+
+export async function getOwnedBrewLogById(id: string) {
+  noStore();
+  return getOwnedBrewLogByIdFromDb(id);
 }
 
 export async function getCommunityOverview() {
@@ -412,6 +454,20 @@ function getItemPopularity(item: FeedItem): number {
   }
 
   return item.brewLog.rating * 100 + item.brewLog.flavorTags.length * 10;
+}
+
+async function canViewerReadContent(visibility: Visibility, ownerId: string) {
+  const viewer = await getOptionalViewerFromDb();
+  const isFollower = viewer ? await isFollowingInDb(viewer.id, ownerId) : false;
+  return canReadVisibility(visibility, {
+    ownerId,
+    viewer,
+    isFollower
+  });
+}
+
+function isPubliclyAddressable(visibility: Visibility) {
+  return visibility === "public" || visibility === "unlisted";
 }
 
 function slugifyGear(item: GearItem) {

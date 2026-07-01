@@ -1,11 +1,15 @@
 import { notFound } from "next/navigation";
 import { BrewLogForm } from "@/components/forms/brew-log-form";
 import { Card, CardTitle } from "@/components/ui/card";
-import { getBrewLogById, getCoffees, getRecipes } from "@/lib/data/queries";
+import { getCoffees, getOwnedBrewLogById, getRecipes } from "@/lib/data/queries";
 
 export default async function EditBrewLogPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [brewLog, recipes, coffees] = await Promise.all([getBrewLogById(id), getRecipes(), getCoffees()]);
+  const [brewLog, recipes, coffees] = await Promise.all([
+    getOwnedBrewLogById(id),
+    getRecipes(),
+    getCoffees()
+  ]);
 
   if (!brewLog) {
     notFound();
@@ -16,7 +20,12 @@ export default async function EditBrewLogPage({ params }: { params: Promise<{ id
       <h1 className="mb-5 text-3xl font-bold">Edit Brew Log</h1>
       <Card>
         <CardTitle>Actual brew</CardTitle>
-        <BrewLogForm recipes={recipes} coffees={coffees} brewLog={brewLog} submitLabel="Update Brew Log" />
+        <BrewLogForm
+          recipes={recipes}
+          coffees={coffees}
+          brewLog={brewLog}
+          submitLabel="Update Brew Log"
+        />
       </Card>
     </div>
   );

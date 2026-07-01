@@ -8,14 +8,19 @@ import { Card, CardTitle } from "@/components/ui/card";
 import { AddToCollectionForm } from "@/components/social/add-to-collection-form";
 import { CommentThread } from "@/components/social/comment-thread";
 import { ReportForm } from "@/components/social/report-form";
-import { getBrewLogById, getCollections, getCommentsForTarget, getSocialCountsForTarget } from "@/lib/data/queries";
+import {
+  getCollections,
+  getCommentsForTarget,
+  getOwnedBrewLogById,
+  getSocialCountsForTarget
+} from "@/lib/data/queries";
 import { deleteBrewLogAction } from "@/lib/server-actions/brews";
 import { likeAction, saveTargetAction } from "@/lib/server-actions/social";
 import { formatDuration } from "@/lib/format";
 
 export default async function BrewLogDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const brewLog = await getBrewLogById(id);
+  const brewLog = await getOwnedBrewLogById(id);
 
   if (!brewLog) {
     notFound();
@@ -33,7 +38,13 @@ export default async function BrewLogDetailPage({ params }: { params: Promise<{ 
       <main className="grid gap-5">
         <Card className="p-0">
           <div className="relative aspect-[16/9] overflow-hidden rounded-t-[var(--radius-md)]">
-            <Image src={brewLog.photos[0]} alt="" fill sizes="(min-width: 1024px) 760px, 100vw" className="object-cover" />
+            <Image
+              src={brewLog.photos[0]}
+              alt=""
+              fill
+              sizes="(min-width: 1024px) 760px, 100vw"
+              className="object-cover"
+            />
           </div>
           <div className="p-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
@@ -46,7 +57,11 @@ export default async function BrewLogDetailPage({ params }: { params: Promise<{ 
                 <p className="mt-2 text-sm text-[var(--text-muted)]">
                   {brewLog.recipe ? (
                     <>
-                      Brewed from <Link href={`/recipes/${brewLog.recipe.id}`} className="text-[var(--accent)]">{brewLog.recipe.title}</Link> with {brewLog.coffee.name}.
+                      Brewed from{" "}
+                      <Link href={`/recipes/${brewLog.recipe.id}`} className="text-[var(--accent)]">
+                        {brewLog.recipe.title}
+                      </Link>{" "}
+                      with {brewLog.coffee.name}.
                     </>
                   ) : (
                     <>Free brew with {brewLog.coffee.name}.</>
@@ -60,8 +75,16 @@ export default async function BrewLogDetailPage({ params }: { params: Promise<{ 
             </div>
             <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <Metric label="Dose" value={`${brewLog.doseGrams} g`} />
-              <Metric label={brewLog.method === "Espresso" ? "Water in" : "Water"} value={`${brewLog.waterGrams} g`} />
-              {brewLog.outputGrams ? <Metric label={brewLog.method === "Espresso" ? "Yield" : "Output"} value={`${brewLog.outputGrams} g`} /> : null}
+              <Metric
+                label={brewLog.method === "Espresso" ? "Water in" : "Water"}
+                value={`${brewLog.waterGrams} g`}
+              />
+              {brewLog.outputGrams ? (
+                <Metric
+                  label={brewLog.method === "Espresso" ? "Yield" : "Output"}
+                  value={`${brewLog.outputGrams} g`}
+                />
+              ) : null}
               <Metric label="Temp" value={`${brewLog.temperatureCelsius} C`} />
               <Metric label="Time" value={formatDuration(brewLog.brewTimeSeconds)} />
             </div>
@@ -77,7 +100,13 @@ export default async function BrewLogDetailPage({ params }: { params: Promise<{ 
           </div>
         </Card>
         <Card>
-          <CommentThread comments={comments} targetType="brew_log" targetId={brewLog.id} path={path} label="Brew log comment" />
+          <CommentThread
+            comments={comments}
+            targetType="brew_log"
+            targetId={brewLog.id}
+            path={path}
+            label="Brew log comment"
+          />
         </Card>
       </main>
       <aside className="grid content-start gap-4">
@@ -88,20 +117,45 @@ export default async function BrewLogDetailPage({ params }: { params: Promise<{ 
               <input type="hidden" name="targetType" value="brew_log" />
               <input type="hidden" name="targetId" value={brewLog.id} />
               <input type="hidden" name="path" value={path} />
-              <Button className="w-full" variant="secondary" icon={<Bookmark className="h-4 w-4" aria-hidden />}>Save</Button>
+              <Button
+                className="w-full"
+                variant="secondary"
+                icon={<Bookmark className="h-4 w-4" aria-hidden />}
+              >
+                Save
+              </Button>
             </form>
             <form action={likeAction}>
               <input type="hidden" name="targetType" value="brew_log" />
               <input type="hidden" name="targetId" value={brewLog.id} />
               <input type="hidden" name="path" value={path} />
-              <Button className="w-full" variant="secondary" icon={<Star className="h-4 w-4" aria-hidden />}>Like</Button>
+              <Button
+                className="w-full"
+                variant="secondary"
+                icon={<Star className="h-4 w-4" aria-hidden />}
+              >
+                Like
+              </Button>
             </form>
             <Link href={`/brews/${brewLog.id}/edit`}>
-              <Button className="w-full" variant="secondary" icon={<Edit className="h-4 w-4" aria-hidden />}>Edit</Button>
+              <Button
+                className="w-full"
+                variant="secondary"
+                icon={<Edit className="h-4 w-4" aria-hidden />}
+              >
+                Edit
+              </Button>
             </Link>
             <form action={deleteBrewLogAction}>
               <input type="hidden" name="id" value={brewLog.id} />
-              <Button className="w-full" type="submit" variant="danger" icon={<Trash2 className="h-4 w-4" aria-hidden />}>Delete</Button>
+              <Button
+                className="w-full"
+                type="submit"
+                variant="danger"
+                icon={<Trash2 className="h-4 w-4" aria-hidden />}
+              >
+                Delete
+              </Button>
             </form>
           </div>
         </Card>
@@ -111,17 +165,48 @@ export default async function BrewLogDetailPage({ params }: { params: Promise<{ 
         </Card>
         <Card>
           <CardTitle>Add to collection</CardTitle>
-          <AddToCollectionForm collections={collections} targetType="brew_log" targetId={brewLog.id} path={path} />
+          <AddToCollectionForm
+            collections={collections}
+            targetType="brew_log"
+            targetId={brewLog.id}
+            path={path}
+          />
         </Card>
         <Card>
           <CardTitle>Actual settings</CardTitle>
           <div className="mt-4 grid gap-3 text-sm">
-            <p className="flex items-center justify-between gap-3"><span className="text-[var(--text-muted)]">Grind</span><span>{brewLog.grindSetting}</span></p>
-            <p className="flex items-center justify-between gap-3"><span className="text-[var(--text-muted)]">Method</span><span>{brewLog.method}</span></p>
-            {brewLog.pressureBars ? <p className="flex items-center justify-between gap-3"><span className="text-[var(--text-muted)]">Pressure</span><span>{brewLog.pressureBars} bar</span></p> : null}
-            <p className="flex items-center justify-between gap-3"><span className="text-[var(--text-muted)]">Brewed</span><span>{new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(brewLog.brewedAt))}</span></p>
-            <p className="flex items-center justify-between gap-3"><span className="text-[var(--text-muted)]">Comments</span><span>{socialCounts.comments}</span></p>
-            <p className="flex items-center justify-between gap-3"><span className="text-[var(--text-muted)]">Saves</span><span>{socialCounts.saves}</span></p>
+            <p className="flex items-center justify-between gap-3">
+              <span className="text-[var(--text-muted)]">Grind</span>
+              <span>{brewLog.grindSetting}</span>
+            </p>
+            <p className="flex items-center justify-between gap-3">
+              <span className="text-[var(--text-muted)]">Method</span>
+              <span>{brewLog.method}</span>
+            </p>
+            {brewLog.pressureBars ? (
+              <p className="flex items-center justify-between gap-3">
+                <span className="text-[var(--text-muted)]">Pressure</span>
+                <span>{brewLog.pressureBars} bar</span>
+              </p>
+            ) : null}
+            <p className="flex items-center justify-between gap-3">
+              <span className="text-[var(--text-muted)]">Brewed</span>
+              <span>
+                {new Intl.DateTimeFormat("en", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric"
+                }).format(new Date(brewLog.brewedAt))}
+              </span>
+            </p>
+            <p className="flex items-center justify-between gap-3">
+              <span className="text-[var(--text-muted)]">Comments</span>
+              <span>{socialCounts.comments}</span>
+            </p>
+            <p className="flex items-center justify-between gap-3">
+              <span className="text-[var(--text-muted)]">Saves</span>
+              <span>{socialCounts.saves}</span>
+            </p>
           </div>
         </Card>
         {brewLog.recipe ? (
@@ -130,8 +215,13 @@ export default async function BrewLogDetailPage({ params }: { params: Promise<{ 
             <div className="mt-4 grid gap-3">
               {brewLog.recipe.steps.slice(0, 4).map((step) => (
                 <div key={step.id} className="rounded-[var(--radius-sm)] bg-white/5 p-3">
-                  <p className="flex items-center gap-2 text-sm font-semibold"><Clock className="h-4 w-4 text-[var(--accent)]" aria-hidden />{step.label}</p>
-                  <p className="mt-1 text-xs text-[var(--text-muted)]">{formatDuration(step.startsAtSeconds)} · {step.instruction}</p>
+                  <p className="flex items-center gap-2 text-sm font-semibold">
+                    <Clock className="h-4 w-4 text-[var(--accent)]" aria-hidden />
+                    {step.label}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">
+                    {formatDuration(step.startsAtSeconds)} · {step.instruction}
+                  </p>
                 </div>
               ))}
             </div>

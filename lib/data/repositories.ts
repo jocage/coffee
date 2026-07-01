@@ -74,6 +74,7 @@ import type {
 } from "@/lib/domain";
 import { auth } from "@/lib/auth/auth";
 import { isAdminProfile } from "@/lib/permissions/admin";
+import { canReadVisibility } from "@/lib/permissions/visibility";
 import { calculateRatio } from "@/modules/recipes/recipe-math";
 import { calculateRecipeStats } from "@/modules/recipes/stats";
 
@@ -127,6 +128,32 @@ export async function getViewerFromDb(): Promise<UserProfile> {
 
     return mapProfile(profile);
   }, seedCurrentUser);
+}
+
+export async function getOptionalViewerFromDb(): Promise<UserProfile | null> {
+  try {
+    return await getViewerFromDb();
+  } catch (error) {
+    if (error instanceof AuthRequiredError) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+export async function isFollowingInDb(followerId: string | undefined, followingId: string) {
+  if (!followerId || followerId === followingId) {
+    return false;
+  }
+
+  return withSeedFallback(async () => {
+    const row = await db.query.follows.findFirst({
+      where: and(eq(follows.followerId, followerId), eq(follows.followingId, followingId))
+    });
+
+    return Boolean(row);
+  }, false);
 }
 
 export async function getRecipesFromDb(filters?: {
@@ -184,6 +211,12 @@ export async function getRecipesFromDb(filters?: {
 
 export async function getRecipeByIdFromDb(id: string): Promise<Recipe | null> {
   const recipes = await getRecipesFromDb();
+  return recipes.find((recipe) => recipe.id === id) ?? null;
+}
+
+export async function getOwnedRecipeByIdFromDb(id: string): Promise<Recipe | null> {
+  const viewerId = await ensureCurrentIdentity();
+  const recipes = await getRecipesFromDb({ ownerId: viewerId });
   return recipes.find((recipe) => recipe.id === id) ?? null;
 }
 
@@ -670,6 +703,12 @@ export async function getBrewLogByIdFromDb(id: string): Promise<BrewLog | null> 
   );
 }
 
+export async function getOwnedBrewLogByIdFromDb(id: string): Promise<BrewLog | null> {
+  const viewerId = await ensureCurrentIdentity();
+  const brewLogs = await getBrewLogsFromDb({ ownerId: viewerId });
+  return brewLogs.find((brewLog) => brewLog.id === id) ?? null;
+}
+
 export async function getFeedFromDb(): Promise<FeedItem[]> {
   const [recipes, brewLogs] = await Promise.all([
     getRecipesFromDb({ visibility: "public" }),
@@ -780,6 +819,7 @@ export async function createContentReportInDb(input: {
   details?: string;
 }) {
   const viewerId = await ensureCurrentIdentity();
+  await assertCanUseSocialTarget(viewerId, input, "report");
 
   await db.insert(contentReports).values({
     id: crypto.randomUUID(),
@@ -1712,6 +1752,8 @@ export async function addCollectionItemInDb(input: {
     throw new Error("Collection not found");
   }
 
+  await assertCanUseSocialTarget(viewerId, input, "save");
+
   const existingItems = await db.query.collectionItems.findMany({
     where: eq(collectionItems.collectionId, input.collectionId)
   });
@@ -1760,6 +1802,7 @@ export async function removeCollectionItemInDb(input: { collectionId: string; it
 export async function addReactionInDb(input: { targetType: SocialTargetType; targetId: string }) {
   const viewerId = await ensureCurrentIdentity();
   const actor = await getNotificationActor(viewerId);
+  await assertCanUseSocialTarget(viewerId, input, "react");
 
   const [created] = await db
     .insert(reactions)
@@ -1794,6 +1837,7 @@ export async function addReactionInDb(input: { targetType: SocialTargetType; tar
 export async function saveTargetInDb(input: { targetType: SocialTargetType; targetId: string }) {
   const viewerId = await ensureCurrentIdentity();
   const actor = await getNotificationActor(viewerId);
+  await assertCanUseSocialTarget(viewerId, input, "save");
 
   const [created] = await db
     .insert(saves)
@@ -1861,6 +1905,7 @@ export async function createCommentInDb(input: {
 }) {
   const viewerId = await ensureCurrentIdentity();
   const actor = await getNotificationActor(viewerId);
+  await assertCanUseSocialTarget(viewerId, input, "comment");
 
   await db.insert(comments).values({
     id: crypto.randomUUID(),
@@ -2531,6 +2576,104 @@ async function refreshRecipeStatsInDb(recipeId: string) {
       updatedAt: new Date()
     })
     .where(eq(recipesTable.id, recipeId));
+}
+
+type SocialTargetAccess = {
+  ownerId: string;
+  visibility: Visibility;
+  commentPolicy?: CommentPolicy;
+};
+
+async function assertCanUseSocialTarget(
+  viewerId: string,
+  input: { targetType: SocialTargetType; targetId: string; parentId?: string },
+  action: "react" | "save" | "comment" | "report"
+) {
+  const target = await getSocialTargetAccess(input);
+
+  if (!target) {
+    throw new Error("Target not found");
+  }
+
+  const isFollower = await isFollowingInDb(viewerId, target.ownerId);
+  const canRead = canReadVisibility(target.visibility, {
+    ownerId: target.ownerId,
+    viewer: { id: viewerId },
+    isFollower
+  });
+
+  if (!canRead) {
+    throw new Error("Target is not available");
+  }
+
+  if (action === "comment") {
+    const policy = target.commentPolicy ?? "public";
+    if (policy === "disabled") {
+      throw new Error("Comments are disabled");
+    }
+    if (policy === "followers" && viewerId !== target.ownerId && !isFollower) {
+      throw new Error("Comments are limited to followers");
+    }
+  }
+}
+
+async function getSocialTargetAccess(input: {
+  targetType: SocialTargetType;
+  targetId: string;
+}): Promise<SocialTargetAccess | null> {
+  if (input.targetType === "recipe") {
+    const row = await db.query.recipes.findFirst({
+      where: eq(recipesTable.id, input.targetId)
+    });
+
+    return row
+      ? {
+          ownerId: row.ownerId,
+          visibility: row.visibility,
+          commentPolicy: row.commentPolicy
+        }
+      : null;
+  }
+
+  if (input.targetType === "brew_log") {
+    const row = await db.query.brewLogs.findFirst({
+      where: eq(brewLogsTable.id, input.targetId)
+    });
+
+    return row ? { ownerId: row.ownerId, visibility: row.visibility } : null;
+  }
+
+  if (input.targetType === "coffee") {
+    const row = await db.query.coffeeBeans.findFirst({
+      where: eq(coffeeBeans.id, input.targetId)
+    });
+
+    return row?.ownerId ? { ownerId: row.ownerId, visibility: row.visibility } : null;
+  }
+
+  if (input.targetType === "gear") {
+    const row = await db.query.gearItems.findFirst({
+      where: eq(gearItems.id, input.targetId)
+    });
+
+    return row?.ownerId ? { ownerId: row.ownerId, visibility: row.visibility } : null;
+  }
+
+  if (input.targetType === "collection") {
+    const row = await db.query.collections.findFirst({
+      where: eq(collectionsTable.id, input.targetId)
+    });
+
+    return row ? { ownerId: row.ownerId, visibility: row.visibility } : null;
+  }
+
+  const comment = await db.query.comments.findFirst({
+    where: eq(comments.id, input.targetId)
+  });
+
+  return comment
+    ? getSocialTargetAccess({ targetType: comment.targetType, targetId: comment.targetId })
+    : null;
 }
 
 function mapCoffee(row: DbCoffee): CoffeeBean {

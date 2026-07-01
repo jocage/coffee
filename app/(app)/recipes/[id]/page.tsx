@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { StepTable } from "@/components/coffee/step-table";
 import { CommentThread } from "@/components/social/comment-thread";
-import { getCommentsForTarget, getRecipeById } from "@/lib/data/queries";
+import { getCommentsForTarget, getOwnedRecipeById } from "@/lib/data/queries";
 import { deleteRecipeAction } from "@/lib/server-actions/recipes";
 
 export default async function OwnerRecipePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [recipe, comments] = await Promise.all([
-    getRecipeById(id),
+    getOwnedRecipeById(id),
     getCommentsForTarget({ targetType: "recipe", targetId: id })
   ]);
 
@@ -31,14 +31,21 @@ export default async function OwnerRecipePage({ params }: { params: Promise<{ id
         </div>
         <div className="flex gap-2">
           <Link href={`/recipes/${recipe.id}/edit`}>
-            <Button variant="secondary" icon={<Edit className="h-4 w-4" aria-hidden />}>Edit</Button>
+            <Button variant="secondary" icon={<Edit className="h-4 w-4" aria-hidden />}>
+              Edit
+            </Button>
           </Link>
           <Link href={`/r/${recipe.author.handle}/${recipe.slug}`}>
             <Button icon={<Share2 className="h-4 w-4" aria-hidden />}>Public page</Button>
           </Link>
           <form action={deleteRecipeAction}>
             <input type="hidden" name="id" value={recipe.id} />
-            <Button type="submit" variant="danger" icon={<Trash2 className="h-4 w-4" aria-hidden />} aria-label="Delete recipe">
+            <Button
+              type="submit"
+              variant="danger"
+              icon={<Trash2 className="h-4 w-4" aria-hidden />}
+              aria-label="Delete recipe"
+            >
               Delete
             </Button>
           </form>
@@ -51,7 +58,13 @@ export default async function OwnerRecipePage({ params }: { params: Promise<{ id
         </div>
       </Card>
       <Card className="mt-5">
-        <CommentThread comments={comments} targetType="recipe" targetId={recipe.id} path={`/recipes/${recipe.id}`} label="Recipe comment" />
+        <CommentThread
+          comments={comments}
+          targetType="recipe"
+          targetId={recipe.id}
+          path={`/recipes/${recipe.id}`}
+          label="Recipe comment"
+        />
       </Card>
     </div>
   );

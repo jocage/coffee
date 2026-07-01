@@ -12,12 +12,7 @@ import { TasteRadar } from "@/components/coffee/taste-radar";
 import { AddToCollectionForm } from "@/components/social/add-to-collection-form";
 import { CommentThread } from "@/components/social/comment-thread";
 import { ReportForm } from "@/components/social/report-form";
-import {
-  getCollections,
-  getCommentsForTarget,
-  getPublicRecipe,
-  getSocialCountsForTarget
-} from "@/lib/data/queries";
+import { getCollections, getCommentsForTarget, getPublicRecipe } from "@/lib/data/queries";
 import { formatDuration, formatRatio } from "@/lib/format";
 import { remixRecipeAction } from "@/lib/server-actions/recipes";
 import { likeAction, saveTargetAction } from "@/lib/server-actions/social";
@@ -52,9 +47,8 @@ export default async function PublicRecipePage({ params }: { params: Promise<Par
   }
 
   const path = `/r/${recipe.author.handle}/${recipe.slug}`;
-  const [comments, socialCounts, collections] = await Promise.all([
+  const [comments, collections] = await Promise.all([
     getCommentsForTarget({ targetType: "recipe", targetId: recipe.id }),
-    getSocialCountsForTarget({ targetType: "recipe", targetId: recipe.id }),
     getCollections()
   ]);
 
@@ -194,14 +188,8 @@ export default async function PublicRecipePage({ params }: { params: Promise<Par
               label="Rating"
             />
             <Metric value={recipe.stats.brews.toLocaleString()} label="Brews" />
-            <Metric
-              value={(recipe.stats.saves + socialCounts.saves).toLocaleString()}
-              label="Saves"
-            />
-            <Metric
-              value={(recipe.stats.comments + socialCounts.comments).toLocaleString()}
-              label="Comments"
-            />
+            <Metric value={recipe.stats.saves.toLocaleString()} label="Saves" />
+            <Metric value={recipe.stats.comments.toLocaleString()} label="Comments" />
           </div>
         </Card>
         <Card>
