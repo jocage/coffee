@@ -43,6 +43,9 @@ export default async function RecipesPage({
     view?: string;
     method?: string;
     gearId?: string;
+    dripperId?: string;
+    grinderId?: string;
+    filterId?: string;
     setup?: string;
     imported?: string;
   }>;
@@ -57,28 +60,58 @@ export default async function RecipesPage({
   const view = params.view === "saved" ? "saved" : "mine";
   const setup: SetupFilter = params.setup === "compatible" ? "compatible" : "all";
   const gear = await getMyGear();
-  const gearId = gear.some((item) => item.id === params.gearId) ? params.gearId : "";
+  const drippers = gear
+    .filter((item) => item.type === "dripper")
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const grinders = gear
+    .filter((item) => item.type === "grinder")
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const filters = gear
+    .filter((item) => item.type === "filter")
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const legacyGear = gear.find((item) => item.id === params.gearId);
+  const dripperId = drippers.some((item) => item.id === params.dripperId)
+    ? params.dripperId
+    : legacyGear?.type === "dripper"
+      ? legacyGear.id
+      : "";
+  const grinderId = grinders.some((item) => item.id === params.grinderId)
+    ? params.grinderId
+    : legacyGear?.type === "grinder"
+      ? legacyGear.id
+      : "";
+  const filterId = filters.some((item) => item.id === params.filterId)
+    ? params.filterId
+    : legacyGear?.type === "filter"
+      ? legacyGear.id
+      : "";
   const recipes =
     view === "saved"
       ? await getSavedRecipes({
           query: params.q,
           method,
           visibility,
-          gearId,
+          dripperId,
+          grinderId,
+          filterId,
           compatible: setup === "compatible"
         })
       : await getMyRecipes({
           query: params.q,
           method,
           visibility,
-          gearId,
+          dripperId,
+          grinderId,
+          filterId,
           compatible: setup === "compatible"
         });
   const baseQuery = new URLSearchParams();
   if (params.q) baseQuery.set("q", params.q);
   if (view === "saved") baseQuery.set("view", "saved");
   if (method !== "all") baseQuery.set("method", method);
-  if (gearId) baseQuery.set("gearId", gearId);
+  if (dripperId) baseQuery.set("dripperId", dripperId);
+  if (grinderId) baseQuery.set("grinderId", grinderId);
+  if (filterId) baseQuery.set("filterId", filterId);
   if (setup !== "all") baseQuery.set("setup", setup);
 
   return (
@@ -113,7 +146,7 @@ export default async function RecipesPage({
       ) : null}
       <form
         action="/recipes"
-        className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_160px_170px_190px_170px_auto]"
+        className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_150px_150px_180px_180px_160px_160px_auto]"
       >
         {view === "saved" ? <input type="hidden" name="view" value="saved" /> : null}
         <Input
@@ -141,9 +174,25 @@ export default async function RecipesPage({
             </option>
           ))}
         </Select>
-        <Select name="gearId" defaultValue={gearId} aria-label="Filter recipes by gear">
-          <option value="">Any gear</option>
-          {gear.map((item) => (
+        <Select name="dripperId" defaultValue={dripperId} aria-label="Filter recipes by dripper">
+          <option value="">Any dripper</option>
+          {drippers.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </Select>
+        <Select name="grinderId" defaultValue={grinderId} aria-label="Filter recipes by grinder">
+          <option value="">Any grinder</option>
+          {grinders.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </Select>
+        <Select name="filterId" defaultValue={filterId} aria-label="Filter recipes by filter">
+          <option value="">Any filter</option>
+          {filters.map((item) => (
             <option key={item.id} value={item.id}>
               {item.name}
             </option>
@@ -164,7 +213,9 @@ export default async function RecipesPage({
             if (params.q) query.set("q", params.q);
             if (visibility !== "all") query.set("visibility", visibility);
             if (method !== "all") query.set("method", method);
-            if (gearId) query.set("gearId", gearId);
+            if (dripperId) query.set("dripperId", dripperId);
+            if (grinderId) query.set("grinderId", grinderId);
+            if (filterId) query.set("filterId", filterId);
             if (setup !== "all") query.set("setup", setup);
             if (tab.value !== "mine") query.set("view", tab.value);
             return {

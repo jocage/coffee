@@ -139,7 +139,9 @@ export async function getMyRecipes(filters?: {
   query?: string;
   method?: BrewMethod | "all";
   visibility?: Visibility | "all";
-  gearId?: string;
+  dripperId?: string;
+  grinderId?: string;
+  filterId?: string;
   compatible?: boolean;
 }) {
   noStore();
@@ -158,7 +160,9 @@ export async function getSavedRecipes(filters?: {
   query?: string;
   method?: BrewMethod | "all";
   visibility?: Visibility | "all";
-  gearId?: string;
+  dripperId?: string;
+  grinderId?: string;
+  filterId?: string;
   compatible?: boolean;
 }) {
   noStore();
@@ -508,19 +512,65 @@ async function canViewerReadContent(visibility: Visibility, ownerId: string) {
 
 async function filterRecipeList(
   recipes: Recipe[],
-  filters: { gearId?: string; compatible?: boolean } | undefined,
+  filters:
+    | { dripperId?: string; grinderId?: string; filterId?: string; compatible?: boolean }
+    | undefined,
   viewer: UserProfile
 ) {
-  let filtered = filters?.gearId
-    ? recipes.filter((recipe) => recipe.gear.some((item) => item.id === filters.gearId))
-    : recipes;
+  const needsGearFilter = Boolean(filters?.dripperId || filters?.grinderId || filters?.filterId);
+  const gear =
+    filters?.compatible || needsGearFilter ? await getGearFromDb({ ownerId: viewer.id }) : [];
+  let filtered = recipes;
+
+  if (filters?.dripperId) {
+    const dripper = gear.find((item) => item.id === filters.dripperId && item.type === "dripper");
+    filtered = dripper
+      ? filtered.filter((recipe) => selectedGearMatchesRecipe(recipe, dripper))
+      : [];
+  }
+
+  if (filters?.grinderId) {
+    const grinder = gear.find((item) => item.id === filters.grinderId && item.type === "grinder");
+    filtered = grinder
+      ? filtered.filter((recipe) => recipe.gear.some((item) => item.id === grinder.id))
+      : [];
+  }
+
+  if (filters?.filterId) {
+    const filter = gear.find((item) => item.id === filters.filterId && item.type === "filter");
+    filtered = filter ? filtered.filter((recipe) => selectedGearMatchesRecipe(recipe, filter)) : [];
+  }
 
   if (filters?.compatible) {
-    const gear = await getGearFromDb({ ownerId: viewer.id });
     filtered = filterRecipesForSetup(filtered, viewer, gear);
   }
 
   return filtered;
+}
+
+function selectedGearMatchesRecipe(recipe: Recipe, gear: GearItem) {
+  if (recipe.gear.some((item) => item.id === gear.id)) {
+    return true;
+  }
+
+  const method = inferMethodFromGear(gear);
+  return method ? recipe.method === method : false;
+}
+
+function inferMethodFromGear(gear: GearItem): BrewMethod | undefined {
+  if (gear.defaultForMethod) {
+    return gear.defaultForMethod;
+  }
+
+  const text = `${gear.brand} ${gear.model} ${gear.name}`.toLowerCase();
+  if (text.includes("kalita") || text.includes("wave")) return "Kalita";
+  if (text.includes("origami")) return "Origami";
+  if (text.includes("v60")) return "V60";
+  if (text.includes("aeropress")) return "AeroPress";
+  if (text.includes("switch")) return "Switch";
+  if (text.includes("french")) return "French Press";
+
+  return undefined;
 }
 
 function isPubliclyAddressable(visibility: Visibility) {
