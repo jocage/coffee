@@ -40,6 +40,7 @@ describe("validators", () => {
     expect(
       brewLogInputSchema.safeParse({
         recipeId: "recipe_espresso",
+        coffeeId: "coffee_espresso",
         method: "Espresso",
         doseGrams: 18,
         waterGrams: 38,
@@ -83,7 +84,7 @@ describe("validators", () => {
         grindSetting: "6.2",
         brewTimeSeconds: 29,
         rating: 5,
-        tastingNotes: "Missing recipe and coffee.",
+        tastingNotes: "Missing coffee.",
         visibility: "private"
       }).success
     ).toBe(false);
