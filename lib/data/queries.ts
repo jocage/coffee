@@ -148,6 +148,7 @@ export async function getMyRecipes(filters?: {
   grinderId?: string;
   filterId?: string;
   compatible?: boolean;
+  gear?: GearItem[];
 }) {
   noStore();
   const viewer = await getCurrentUser();
@@ -169,6 +170,7 @@ export async function getSavedRecipes(filters?: {
   grinderId?: string;
   filterId?: string;
   compatible?: boolean;
+  gear?: GearItem[];
 }) {
   noStore();
   const viewer = await getCurrentUser();
@@ -518,13 +520,20 @@ async function canViewerReadContent(visibility: Visibility, ownerId: string) {
 async function filterRecipeList(
   recipes: Recipe[],
   filters:
-    | { dripperId?: string; grinderId?: string; filterId?: string; compatible?: boolean }
+    | {
+        dripperId?: string;
+        grinderId?: string;
+        filterId?: string;
+        compatible?: boolean;
+        gear?: GearItem[];
+      }
     | undefined,
   viewer: UserProfile
 ) {
   const needsGearFilter = Boolean(filters?.dripperId || filters?.grinderId || filters?.filterId);
   const gear =
-    filters?.compatible || needsGearFilter ? await getGearFromDb({ ownerId: viewer.id }) : [];
+    filters?.gear ??
+    (filters?.compatible || needsGearFilter ? await getGearFromDb({ ownerId: viewer.id }) : []);
   let filtered = recipes;
 
   if (filters?.dripperId) {

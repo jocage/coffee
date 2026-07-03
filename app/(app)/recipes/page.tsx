@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { Download, Plus, Search, Upload } from "lucide-react";
+import { Download, Plus, Upload } from "lucide-react";
 import { RecipeCard } from "@/components/coffee/recipe-card";
+import { RecipeFiltersForm } from "@/components/forms/recipe-filters-form";
 import { Button } from "@/components/ui/button";
-import { Input, Select } from "@/components/ui/form";
 import { Tabs } from "@/components/ui/tabs";
 import { getMyGear, getMyRecipes, getSavedRecipes } from "@/lib/data/queries";
 import type { BrewMethod, Visibility } from "@/lib/domain";
@@ -71,17 +71,17 @@ export default async function RecipesPage({
     .sort((a, b) => a.name.localeCompare(b.name));
   const legacyGear = gear.find((item) => item.id === params.gearId);
   const dripperId = drippers.some((item) => item.id === params.dripperId)
-    ? params.dripperId
+    ? (params.dripperId ?? "")
     : legacyGear?.type === "dripper"
       ? legacyGear.id
       : "";
   const grinderId = grinders.some((item) => item.id === params.grinderId)
-    ? params.grinderId
+    ? (params.grinderId ?? "")
     : legacyGear?.type === "grinder"
       ? legacyGear.id
       : "";
   const filterId = filters.some((item) => item.id === params.filterId)
-    ? params.filterId
+    ? (params.filterId ?? "")
     : legacyGear?.type === "filter"
       ? legacyGear.id
       : "";
@@ -94,7 +94,8 @@ export default async function RecipesPage({
           dripperId,
           grinderId,
           filterId,
-          compatible: setup === "compatible"
+          compatible: setup === "compatible",
+          gear
         })
       : await getMyRecipes({
           query: params.q,
@@ -103,7 +104,8 @@ export default async function RecipesPage({
           dripperId,
           grinderId,
           filterId,
-          compatible: setup === "compatible"
+          compatible: setup === "compatible",
+          gear
         });
   const baseQuery = new URLSearchParams();
   if (params.q) baseQuery.set("q", params.q);
@@ -144,68 +146,26 @@ export default async function RecipesPage({
           Imported {params.imported} recipes.
         </div>
       ) : null}
-      <form
-        action="/recipes"
-        className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_150px_150px_180px_180px_160px_160px_auto]"
-      >
-        {view === "saved" ? <input type="hidden" name="view" value="saved" /> : null}
-        <Input
-          name="q"
-          defaultValue={params.q}
-          placeholder="Search my recipes..."
-          aria-label="Search recipes"
-        />
-        <Select
-          name="visibility"
-          defaultValue={visibility}
-          aria-label="Filter recipes by visibility"
-          className="md:w-40"
-        >
-          {visibilityTabs.map((tab) => (
-            <option key={tab.value} value={tab.value}>
-              {tab.label}
-            </option>
-          ))}
-        </Select>
-        <Select name="method" defaultValue={method} aria-label="Filter recipes by method">
-          {methodFilters.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </Select>
-        <Select name="dripperId" defaultValue={dripperId} aria-label="Filter recipes by dripper">
-          <option value="">Any dripper</option>
-          {drippers.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
-            </option>
-          ))}
-        </Select>
-        <Select name="grinderId" defaultValue={grinderId} aria-label="Filter recipes by grinder">
-          <option value="">Any grinder</option>
-          {grinders.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
-            </option>
-          ))}
-        </Select>
-        <Select name="filterId" defaultValue={filterId} aria-label="Filter recipes by filter">
-          <option value="">Any filter</option>
-          {filters.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
-            </option>
-          ))}
-        </Select>
-        <Select name="setup" defaultValue={setup} aria-label="Filter recipes by setup">
-          <option value="all">Any setup</option>
-          <option value="compatible">My setup</option>
-        </Select>
-        <Button type="submit" variant="secondary" icon={<Search className="h-4 w-4" aria-hidden />}>
-          Search
-        </Button>
-      </form>
+      <RecipeFiltersForm
+        key={[params.q ?? "", view, visibility, method, dripperId, grinderId, filterId, setup].join(
+          ":"
+        )}
+        values={{
+          q: params.q,
+          view,
+          visibility,
+          method,
+          dripperId,
+          grinderId,
+          filterId,
+          setup
+        }}
+        visibilityOptions={visibilityTabs}
+        methodOptions={methodFilters}
+        drippers={drippers}
+        grinders={grinders}
+        filters={filters}
+      />
       <div className="mb-3">
         <Tabs
           tabs={viewTabs.map((tab) => {
