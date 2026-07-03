@@ -48,6 +48,7 @@ import type {
   GrinderCatalogStatus,
   Recipe,
   SocialTargetType,
+  UserProfile,
   Visibility
 } from "@/lib/domain";
 import { recipes as seedRecipes } from "@/lib/data/seed";
@@ -122,30 +123,51 @@ export async function searchRecipes(filters: {
     : sortRecipesForSetup(recipes, viewer, gear);
 }
 
-export async function getMyRecipes(filters?: { query?: string; visibility?: Visibility | "all" }) {
+export async function getMyRecipes(filters?: {
+  query?: string;
+  method?: BrewMethod | "all";
+  visibility?: Visibility | "all";
+  gearId?: string;
+  compatible?: boolean;
+}) {
   noStore();
   const viewer = await getCurrentUser();
-  return getRecipesFromDb({ ...filters, ownerId: viewer.id });
+  const recipes = await getRecipesFromDb({
+    query: filters?.query,
+    method: filters?.method && filters.method !== "all" ? filters.method : undefined,
+    visibility: filters?.visibility,
+    ownerId: viewer.id
+  });
+
+  return filterRecipeList(recipes, filters, viewer);
 }
 
 export async function getSavedRecipes(filters?: {
   query?: string;
+  method?: BrewMethod | "all";
   visibility?: Visibility | "all";
+  gearId?: string;
+  compatible?: boolean;
 }) {
   noStore();
+  const viewer = await getCurrentUser();
   const recipes = await getSavedRecipesFromDb();
-  return recipes.filter((recipe) => {
+  const filtered = recipes.filter((recipe) => {
     const queryMatches = filters?.query
       ? [recipe.title, recipe.subtitle, recipe.description, recipe.author.displayName].some(
           (value) => value.toLowerCase().includes(filters.query?.toLowerCase() ?? "")
         )
       : true;
+    const methodMatches =
+      filters?.method && filters.method !== "all" ? recipe.method === filters.method : true;
     const visibilityMatches =
       filters?.visibility && filters.visibility !== "all"
         ? recipe.visibility === filters.visibility
         : true;
-    return queryMatches && visibilityMatches;
+    return queryMatches && methodMatches && visibilityMatches;
   });
+
+  return filterRecipeList(filtered, filters, viewer);
 }
 
 export async function getRecipes() {
@@ -470,6 +492,23 @@ async function canViewerReadContent(visibility: Visibility, ownerId: string) {
     viewer,
     isFollower
   });
+}
+
+async function filterRecipeList(
+  recipes: Recipe[],
+  filters: { gearId?: string; compatible?: boolean } | undefined,
+  viewer: UserProfile
+) {
+  let filtered = filters?.gearId
+    ? recipes.filter((recipe) => recipe.gear.some((item) => item.id === filters.gearId))
+    : recipes;
+
+  if (filters?.compatible) {
+    const gear = await getGearFromDb({ ownerId: viewer.id });
+    filtered = filterRecipesForSetup(filtered, viewer, gear);
+  }
+
+  return filtered;
 }
 
 function isPubliclyAddressable(visibility: Visibility) {
