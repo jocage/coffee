@@ -60,6 +60,11 @@ export async function getCurrentUser() {
   return getViewerFromDb();
 }
 
+export async function getOptionalCurrentUser() {
+  noStore();
+  return getOptionalViewerFromDb();
+}
+
 export async function getDashboardData() {
   noStore();
   const user = await getCurrentUser();
@@ -549,12 +554,12 @@ async function filterRecipeList(
 }
 
 function selectedGearMatchesRecipe(recipe: Recipe, gear: GearItem) {
-  if (recipe.gear.some((item) => item.id === gear.id)) {
-    return true;
+  const method = inferMethodFromGear(gear);
+  if (method) {
+    return recipe.method === method;
   }
 
-  const method = inferMethodFromGear(gear);
-  return method ? recipe.method === method : false;
+  return recipe.gear.some((item) => item.id === gear.id);
 }
 
 function inferMethodFromGear(gear: GearItem): BrewMethod | undefined {

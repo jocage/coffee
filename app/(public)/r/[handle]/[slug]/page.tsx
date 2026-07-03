@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Bookmark, MessageCircle, Repeat2, Star } from "lucide-react";
+import { Bookmark, Edit, MessageCircle, Repeat2, Star } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { BackButton } from "@/components/ui/back-button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,12 @@ import { TasteRadar } from "@/components/coffee/taste-radar";
 import { AddToCollectionForm } from "@/components/social/add-to-collection-form";
 import { CommentThread } from "@/components/social/comment-thread";
 import { ReportForm } from "@/components/social/report-form";
-import { getCollections, getCommentsForTarget, getPublicRecipe } from "@/lib/data/queries";
+import {
+  getCollections,
+  getCommentsForTarget,
+  getOptionalCurrentUser,
+  getPublicRecipe
+} from "@/lib/data/queries";
 import { formatDuration, formatRatio } from "@/lib/format";
 import { remixRecipeAction } from "@/lib/server-actions/recipes";
 import { likeAction, saveTargetAction } from "@/lib/server-actions/social";
@@ -48,15 +53,24 @@ export default async function PublicRecipePage({ params }: { params: Promise<Par
   }
 
   const path = `/r/${recipe.author.handle}/${recipe.slug}`;
-  const [comments, collections] = await Promise.all([
+  const [comments, collections, viewer] = await Promise.all([
     getCommentsForTarget({ targetType: "recipe", targetId: recipe.id }),
-    getCollections()
+    getCollections(),
+    getOptionalCurrentUser()
   ]);
+  const isOwner = viewer?.id === recipe.author.id;
 
   return (
     <main className="mx-auto grid max-w-7xl gap-5 px-4 py-5 md:px-6 lg:grid-cols-[1fr_380px]">
-      <div className="lg:col-span-2">
+      <div className="flex items-center justify-between gap-3 lg:col-span-2">
         <BackButton fallbackHref={`/u/${recipe.author.handle}`} />
+        {isOwner ? (
+          <Link href={`/recipes/${recipe.id}/edit`}>
+            <Button variant="secondary" icon={<Edit className="h-4 w-4" aria-hidden />}>
+              Edit recipe
+            </Button>
+          </Link>
+        ) : null}
       </div>
       <section className="grid gap-5">
         <Card className="overflow-hidden p-0">
