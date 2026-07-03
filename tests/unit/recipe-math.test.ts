@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { calculateRatio, getPublishIssues, getTotalPouredWater } from "@/modules/recipes/recipe-math";
+import {
+  calculateRatio,
+  getPublishIssues,
+  getTotalPouredWater,
+  scaleRecipeSteps
+} from "@/modules/recipes/recipe-math";
 import { recipes } from "@/lib/data/seed";
 
 describe("recipe math", () => {
@@ -15,6 +20,14 @@ describe("recipe math", () => {
 
   it("finds max cumulative water in steps", () => {
     expect(getTotalPouredWater(recipes[0].steps)).toBe(300);
+  });
+
+  it("scales recipe steps to target water", () => {
+    const scaled = scaleRecipeSteps(recipes[0].steps, 300, 250);
+
+    expect(scaled[0].pourGrams).toBe(33);
+    expect(scaled[0].cumulativeWaterGrams).toBe(33);
+    expect(getTotalPouredWater(scaled)).toBe(250);
   });
 
   it("reports publish blockers", () => {

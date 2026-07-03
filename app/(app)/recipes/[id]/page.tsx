@@ -3,8 +3,8 @@ import Link from "next/link";
 import { Edit, Share2, Trash2 } from "lucide-react";
 import { BackButton } from "@/components/ui/back-button";
 import { Button } from "@/components/ui/button";
-import { Card, CardTitle } from "@/components/ui/card";
-import { StepTable } from "@/components/coffee/step-table";
+import { Card } from "@/components/ui/card";
+import { RecipeScalePanel } from "@/components/coffee/recipe-scale-panel";
 import { CommentThread } from "@/components/social/comment-thread";
 import { getCommentsForTarget, getOwnedRecipeById } from "@/lib/data/queries";
 import { deleteRecipeAction } from "@/lib/server-actions/recipes";
@@ -55,12 +55,7 @@ export default async function OwnerRecipePage({ params }: { params: Promise<{ id
           </form>
         </div>
       </div>
-      <Card>
-        <CardTitle>Steps</CardTitle>
-        <div className="mt-4">
-          <StepTable steps={recipe.steps} />
-        </div>
-      </Card>
+      <RecipeScalePanel recipe={recipe} />
       <Card className="mt-5">
         <CommentThread
           comments={comments}

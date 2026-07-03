@@ -8,7 +8,7 @@ import { BackButton } from "@/components/ui/back-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
-import { StepTable } from "@/components/coffee/step-table";
+import { RecipeScalePanel } from "@/components/coffee/recipe-scale-panel";
 import { TasteRadar } from "@/components/coffee/taste-radar";
 import { AddToCollectionForm } from "@/components/social/add-to-collection-form";
 import { CommentThread } from "@/components/social/comment-thread";
@@ -124,12 +124,7 @@ export default async function PublicRecipePage({ params }: { params: Promise<Par
           </Card>
         </div>
 
-        <Card>
-          <CardTitle>Pouring steps</CardTitle>
-          <div className="mt-4">
-            <StepTable steps={recipe.steps} />
-          </div>
-        </Card>
+        <RecipeScalePanel recipe={recipe} />
       </section>
 
       <aside className="grid content-start gap-5">

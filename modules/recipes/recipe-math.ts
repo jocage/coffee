@@ -12,6 +12,29 @@ export function getTotalPouredWater(steps: RecipeStep[]): number {
   return steps.reduce((max, step) => Math.max(max, step.cumulativeWaterGrams), 0);
 }
 
+export function scaleRecipeSteps(
+  steps: RecipeStep[],
+  originalWaterGrams: number,
+  targetWaterGrams: number
+): RecipeStep[] {
+  if (originalWaterGrams <= 0 || targetWaterGrams <= 0) {
+    return steps;
+  }
+
+  const factor = targetWaterGrams / originalWaterGrams;
+  const maxCumulativeWater = getTotalPouredWater(steps);
+
+  return steps.map((step) => ({
+    ...step,
+    pourGrams:
+      step.pourGrams === undefined ? undefined : Math.max(1, Math.round(step.pourGrams * factor)),
+    cumulativeWaterGrams:
+      step.cumulativeWaterGrams >= maxCumulativeWater
+        ? Math.round(targetWaterGrams)
+        : Math.max(1, Math.round(step.cumulativeWaterGrams * factor))
+  }));
+}
+
 export function getPublishIssues(input: {
   title: string;
   method?: string;
