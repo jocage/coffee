@@ -971,7 +971,7 @@ export async function createRecipeInDb(input: {
   await db.insert(recipesTable).values({
     id: recipeId,
     ownerId: viewerId,
-    coffeeId: coffee.id,
+    coffeeId: coffee?.id ?? null,
     slug,
     title: input.title,
     subtitle: input.subtitle ?? "",
