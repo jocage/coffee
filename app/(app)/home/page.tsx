@@ -11,9 +11,26 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs } from "@/components/ui/tabs";
 import { getDashboardData, getHomeFeed } from "@/lib/data/queries";
 
-export default async function HomePage() {
+type FeedTab = "for-you" | "following" | "popular" | "latest";
+
+const feedTabs: Array<{ value: FeedTab; label: string }> = [
+  { value: "for-you", label: "For You" },
+  { value: "following", label: "Following" },
+  { value: "popular", label: "Popular" },
+  { value: "latest", label: "Latest" }
+];
+
+export default async function HomePage({
+  searchParams
+}: {
+  searchParams: Promise<{ feed?: string }>;
+}) {
+  const params = await searchParams;
+  const activeFeedTab = feedTabs.some((tab) => tab.value === params.feed)
+    ? (params.feed as FeedTab)
+    : "for-you";
   const dashboard = await getDashboardData();
-  const feed = await getHomeFeed("for-you");
+  const feed = await getHomeFeed(activeFeedTab);
   const firstName = dashboard.user.displayName.split(" ")[0] || "there";
   const heroImage = dashboard.focusRecipe?.coverUrl || dashboard.user.coverUrl;
 
@@ -130,12 +147,11 @@ export default async function HomePage() {
           <CardHeader>
             <CardTitle>Social feed</CardTitle>
             <Tabs
-              tabs={[
-                { value: "for-you", label: "For You", active: true },
-                { value: "following", label: "Following" },
-                { value: "popular", label: "Popular" },
-                { value: "latest", label: "Latest" }
-              ]}
+              tabs={feedTabs.map((tab) => ({
+                ...tab,
+                active: activeFeedTab === tab.value,
+                href: tab.value === "for-you" ? "/home" : `/home?feed=${tab.value}`
+              }))}
             />
           </CardHeader>
           <div className="grid gap-4">
@@ -144,7 +160,11 @@ export default async function HomePage() {
             ) : (
               <EmptyPanel
                 title="No public activity yet"
-                body="Follow brewers or publish a recipe to build your feed."
+                body={
+                  activeFeedTab === "following"
+                    ? "Follow brewers to see their public recipes and brew logs here."
+                    : "Publish a recipe or brew log to build your feed."
+                }
                 actionHref="/explore"
                 actionLabel="Explore"
                 compact

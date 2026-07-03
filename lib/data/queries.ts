@@ -87,20 +87,32 @@ export async function getHomeFeed(
 ): Promise<FeedItem[]> {
   noStore();
   const [viewer, feedItems] = await Promise.all([getCurrentUser(), getFeedFromDb()]);
-  const visible = feedItems.filter((item) => {
+  const visibleItems = await Promise.all(
+    feedItems.map(async (item) => {
+      const isFollower = await isFollowingInDb(viewer.id, item.author.id);
+      return { item, isFollower };
+    })
+  );
+  let visible = visibleItems.filter(({ item, isFollower }) => {
     const content = item.type === "recipe" ? item.recipe : item.brewLog;
     return canReadVisibility(content.visibility, {
       ownerId: item.author.id,
       viewer,
-      isFollower: tab === "following" || item.author.id !== viewer.id
+      isFollower
     });
   });
 
-  if (tab === "popular") {
-    return [...visible].sort((a, b) => getItemPopularity(b) - getItemPopularity(a));
+  if (tab === "following") {
+    visible = visible.filter(({ isFollower }) => isFollower);
   }
 
-  return [...visible].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  const items = visible.map(({ item }) => item);
+
+  if (tab === "popular") {
+    return [...items].sort((a, b) => getItemPopularity(b) - getItemPopularity(a));
+  }
+
+  return [...items].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }
 
 export async function searchRecipes(filters: {

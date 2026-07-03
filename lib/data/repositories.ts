@@ -163,52 +163,62 @@ export async function getRecipesFromDb(filters?: {
   method?: BrewMethod;
   visibility?: Visibility | "all";
   ownerId?: string;
+  includeDemoData?: boolean;
 }): Promise<Recipe[]> {
-  return withSeedFallback(async () => {
-    const where = and(
-      filters?.method ? eq(recipesTable.method, filters.method) : undefined,
-      filters?.visibility && filters.visibility !== "all"
-        ? eq(recipesTable.visibility, filters.visibility)
-        : undefined,
-      filters?.ownerId ? eq(recipesTable.ownerId, filters.ownerId) : undefined,
-      filters?.query
-        ? or(
-            ilike(recipesTable.title, `%${filters.query}%`),
-            ilike(recipesTable.subtitle, `%${filters.query}%`),
-            ilike(recipesTable.description, `%${filters.query}%`)
-          )
-        : undefined
-    );
+  return withSeedFallback(
+    async () => {
+      const where = and(
+        filters?.method ? eq(recipesTable.method, filters.method) : undefined,
+        filters?.visibility && filters.visibility !== "all"
+          ? eq(recipesTable.visibility, filters.visibility)
+          : undefined,
+        filters?.ownerId ? eq(recipesTable.ownerId, filters.ownerId) : undefined,
+        filters?.query
+          ? or(
+              ilike(recipesTable.title, `%${filters.query}%`),
+              ilike(recipesTable.subtitle, `%${filters.query}%`),
+              ilike(recipesTable.description, `%${filters.query}%`)
+            )
+          : undefined
+      );
 
-    const rows = await db
-      .select({
-        recipe: recipesTable,
-        profile: profiles,
-        coffee: coffeeBeans
-      })
-      .from(recipesTable)
-      .innerJoin(profiles, eq(recipesTable.ownerId, profiles.userId))
-      .leftJoin(coffeeBeans, eq(recipesTable.coffeeId, coffeeBeans.id))
-      .where(where)
-      .orderBy(desc(recipesTable.updatedAt));
+      const rows = await db
+        .select({
+          recipe: recipesTable,
+          profile: profiles,
+          coffee: coffeeBeans
+        })
+        .from(recipesTable)
+        .innerJoin(profiles, eq(recipesTable.ownerId, profiles.userId))
+        .leftJoin(coffeeBeans, eq(recipesTable.coffeeId, coffeeBeans.id))
+        .where(where)
+        .orderBy(desc(recipesTable.updatedAt));
 
-    if (rows.length === 0 && !filters?.query && !filters?.ownerId && shouldUseDemoData()) {
-      return seedRecipes;
-    }
+      if (
+        rows.length === 0 &&
+        filters?.includeDemoData !== false &&
+        !filters?.query &&
+        !filters?.ownerId &&
+        shouldUseDemoData()
+      ) {
+        return seedRecipes;
+      }
 
-    const steps = await getStepsForRecipes(rows.map((row) => row.recipe.id));
-    const gearByRecipeId = await getGearForRecipeIds(rows.map((row) => row.recipe.id));
+      const steps = await getStepsForRecipes(rows.map((row) => row.recipe.id));
+      const gearByRecipeId = await getGearForRecipeIds(rows.map((row) => row.recipe.id));
 
-    return rows.map((row) =>
-      mapRecipe(
-        row.recipe,
-        row.profile,
-        row.coffee,
-        steps.get(row.recipe.id) ?? [],
-        gearByRecipeId.get(row.recipe.id) ?? []
-      )
-    );
-  }, seedRecipes);
+      return rows.map((row) =>
+        mapRecipe(
+          row.recipe,
+          row.profile,
+          row.coffee,
+          steps.get(row.recipe.id) ?? [],
+          gearByRecipeId.get(row.recipe.id) ?? []
+        )
+      );
+    },
+    filters?.includeDemoData === false ? [] : seedRecipes
+  );
 }
 
 export async function getRecipeByIdFromDb(id: string): Promise<Recipe | null> {
@@ -234,12 +244,7 @@ export async function getPublicRecipeFromDb(handle: string, slug: string): Promi
         .from(recipesTable)
         .innerJoin(profiles, eq(recipesTable.ownerId, profiles.userId))
         .leftJoin(coffeeBeans, eq(recipesTable.coffeeId, coffeeBeans.id))
-        .where(
-          and(
-            eq(profiles.handle, handle),
-            eq(recipesTable.slug, slug)
-          )
-        )
+        .where(and(eq(profiles.handle, handle), eq(recipesTable.slug, slug)))
         .orderBy(desc(recipesTable.updatedAt))
         .limit(10);
 
@@ -645,44 +650,55 @@ export async function enterChallengeInDb(input: {
   });
 }
 
-export async function getBrewLogsFromDb(filters?: { ownerId?: string }): Promise<BrewLog[]> {
-  return withSeedFallback(async () => {
-    const rows = await db
-      .select({
-        brewLog: brewLogsTable,
-        recipe: recipesTable,
-        profile: profiles,
-        coffee: coffeeBeans
-      })
-      .from(brewLogsTable)
-      .leftJoin(recipesTable, eq(brewLogsTable.recipeId, recipesTable.id))
-      .innerJoin(profiles, eq(brewLogsTable.ownerId, profiles.userId))
-      .leftJoin(coffeeBeans, eq(brewLogsTable.coffeeId, coffeeBeans.id))
-      .where(filters?.ownerId ? eq(brewLogsTable.ownerId, filters.ownerId) : undefined)
-      .orderBy(desc(brewLogsTable.brewedAt));
+export async function getBrewLogsFromDb(filters?: {
+  ownerId?: string;
+  includeDemoData?: boolean;
+}): Promise<BrewLog[]> {
+  return withSeedFallback(
+    async () => {
+      const rows = await db
+        .select({
+          brewLog: brewLogsTable,
+          recipe: recipesTable,
+          profile: profiles,
+          coffee: coffeeBeans
+        })
+        .from(brewLogsTable)
+        .leftJoin(recipesTable, eq(brewLogsTable.recipeId, recipesTable.id))
+        .innerJoin(profiles, eq(brewLogsTable.ownerId, profiles.userId))
+        .leftJoin(coffeeBeans, eq(brewLogsTable.coffeeId, coffeeBeans.id))
+        .where(filters?.ownerId ? eq(brewLogsTable.ownerId, filters.ownerId) : undefined)
+        .orderBy(desc(brewLogsTable.brewedAt));
 
-    if (rows.length === 0 && !filters?.ownerId && shouldUseDemoData()) {
-      return seedBrewLogs;
-    }
+      if (
+        rows.length === 0 &&
+        filters?.includeDemoData !== false &&
+        !filters?.ownerId &&
+        shouldUseDemoData()
+      ) {
+        return seedBrewLogs;
+      }
 
-    const recipeIds = rows.flatMap((row) => (row.recipe ? [row.recipe.id] : []));
-    const steps = await getStepsForRecipes(recipeIds);
-    const gearByRecipeId = await getGearForRecipeIds(recipeIds);
+      const recipeIds = rows.flatMap((row) => (row.recipe ? [row.recipe.id] : []));
+      const steps = await getStepsForRecipes(recipeIds);
+      const gearByRecipeId = await getGearForRecipeIds(recipeIds);
 
-    return rows.map((row) => {
-      const coffee = row.coffee ?? seedCoffees[0];
-      const recipe = row.recipe
-        ? mapRecipe(
-            row.recipe,
-            row.profile,
-            coffee,
-            steps.get(row.recipe.id) ?? [],
-            gearByRecipeId.get(row.recipe.id) ?? []
-          )
-        : undefined;
-      return mapBrewLog(row.brewLog, row.profile, recipe, coffee);
-    });
-  }, seedBrewLogs);
+      return rows.map((row) => {
+        const coffee = row.coffee ?? seedCoffees[0];
+        const recipe = row.recipe
+          ? mapRecipe(
+              row.recipe,
+              row.profile,
+              coffee,
+              steps.get(row.recipe.id) ?? [],
+              gearByRecipeId.get(row.recipe.id) ?? []
+            )
+          : undefined;
+        return mapBrewLog(row.brewLog, row.profile, recipe, coffee);
+      });
+    },
+    filters?.includeDemoData === false ? [] : seedBrewLogs
+  );
 }
 
 export async function getBrewLogByIdFromDb(id: string): Promise<BrewLog | null> {
@@ -736,12 +752,16 @@ export async function getOwnedBrewLogByIdFromDb(id: string): Promise<BrewLog | n
 
 export async function getFeedFromDb(): Promise<FeedItem[]> {
   const [recipes, brewLogs] = await Promise.all([
-    getRecipesFromDb({ visibility: "public" }),
-    getBrewLogsFromDb()
+    getRecipesFromDb({ visibility: "public", includeDemoData: false }),
+    getBrewLogsFromDb({ includeDemoData: false })
   ]);
+  const seedRecipeIds = new Set(seedRecipes.map((recipe) => recipe.id));
+  const seedBrewLogIds = new Set(seedBrewLogs.map((brewLog) => brewLog.id));
+  const realRecipes = recipes.filter((recipe) => !seedRecipeIds.has(recipe.id));
+  const realBrewLogs = brewLogs.filter((brewLog) => !seedBrewLogIds.has(brewLog.id));
 
   return [
-    ...recipes.map(
+    ...realRecipes.map(
       (recipe): FeedItem => ({
         id: `feed_recipe_${recipe.id}`,
         type: "recipe",
@@ -750,7 +770,7 @@ export async function getFeedFromDb(): Promise<FeedItem[]> {
         createdAt: recipe.updatedAt
       })
     ),
-    ...brewLogs
+    ...realBrewLogs
       .filter((brewLog) => brewLog.visibility === "public")
       .map(
         (brewLog): FeedItem => ({
