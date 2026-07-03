@@ -237,19 +237,28 @@ export async function getPublicRecipeFromDb(handle: string, slug: string): Promi
         .where(
           and(
             eq(profiles.handle, handle),
-            eq(recipesTable.slug, slug),
-            eq(recipesTable.visibility, "public")
+            eq(recipesTable.slug, slug)
           )
         )
-        .limit(1);
+        .orderBy(desc(recipesTable.updatedAt))
+        .limit(10);
 
-      const row = rows[0];
+      const viewer = rows.length > 0 ? await getOptionalViewerFromDb() : null;
+      const readableRows = await Promise.all(
+        rows.map(async (row) => {
+          const isFollower = await isFollowingInDb(viewer?.id, row.recipe.ownerId);
+          return canReadVisibility(row.recipe.visibility, {
+            ownerId: row.recipe.ownerId,
+            viewer,
+            isFollower
+          })
+            ? row
+            : null;
+        })
+      );
+      const row = readableRows.find((item) => item !== null) ?? null;
       if (!row) {
-        return shouldUseDemoData()
-          ? (seedRecipes.find(
-              (recipe) => recipe.author.handle === handle && recipe.slug === slug
-            ) ?? null)
-          : null;
+        return shouldUseDemoData() ? findPublicSeedRecipe(handle, slug) : null;
       }
 
       const steps = await getStepsForRecipes([row.recipe.id]);
@@ -262,7 +271,7 @@ export async function getPublicRecipeFromDb(handle: string, slug: string): Promi
         gearByRecipeId.get(row.recipe.id) ?? []
       );
     },
-    seedRecipes.find((recipe) => recipe.author.handle === handle && recipe.slug === slug) ?? null
+    findPublicSeedRecipe(handle, slug)
   );
 }
 
@@ -3442,6 +3451,17 @@ function slugify(value: string) {
       .trim()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "") || crypto.randomUUID()
+  );
+}
+
+function findPublicSeedRecipe(handle: string, slug: string) {
+  return (
+    seedRecipes.find(
+      (recipe) =>
+        recipe.author.handle === handle &&
+        recipe.slug === slug &&
+        (recipe.visibility === "public" || recipe.visibility === "unlisted")
+    ) ?? null
   );
 }
 
