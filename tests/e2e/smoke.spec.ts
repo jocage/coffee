@@ -101,7 +101,9 @@ test("recipe form persists multiple ordered brew steps", async ({ page }) => {
   await page.locator('textarea[name="stepInstruction"]').nth(1).fill("Second steady pour");
 
   await Promise.all([
-    page.waitForURL((url) => url.pathname.startsWith("/recipes/") && url.pathname !== "/recipes/new"),
+    page.waitForURL(
+      (url) => url.pathname.startsWith("/recipes/") && url.pathname !== "/recipes/new"
+    ),
     page.getByRole("button", { name: "Save draft" }).click()
   ]);
 
@@ -294,13 +296,23 @@ test("recipe comments persist and render", async ({ page }) => {
   await expect(page.getByText(deleteBody)).toBeVisible();
   await Promise.all([
     page.waitForURL("**/r/tetsu/morning-clarity-v60?commentDeleted=1"),
-    page.locator("article").filter({ hasText: deleteBody }).getByRole("button", { name: "Delete" }).first().click()
+    page
+      .locator("article")
+      .filter({ hasText: deleteBody })
+      .getByRole("button", { name: "Delete" })
+      .first()
+      .click()
   ]);
   await expect(page.getByText(deleteBody)).toBeHidden();
 
   await Promise.all([
     page.waitForURL("**/r/tetsu/morning-clarity-v60?reported=1"),
-    page.locator("article").filter({ hasText: body }).getByRole("button", { name: "Report comment" }).first().click()
+    page
+      .locator("article")
+      .filter({ hasText: body })
+      .getByRole("button", { name: "Report comment" })
+      .first()
+      .click()
   ]);
   await page.goto("/admin/moderation");
   await expect(page.getByText(`Reported comment: ${body}`)).toBeVisible();
@@ -325,7 +337,9 @@ test("public recipe can be remixed into an editable draft", async ({ page }) => 
     page.getByRole("button", { name: "Remix" }).click()
   ]);
 
-  await expect(page.getByRole("heading", { name: "Remix of Morning Clarity with V60" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Remix of Morning Clarity with V60" })
+  ).toBeVisible();
   await expect(page.getByText("Remix draft based on")).toBeVisible();
   await expect(page.getByRole("button", { name: "Update recipe" })).toBeVisible();
 });
@@ -400,4 +414,20 @@ test("export studio exposes PNG export controls", async ({ page }) => {
   await page.goto("/export-studio");
   await expect(page.getByRole("heading", { name: "Export Studio" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Export PNG" })).toBeVisible();
+  await expect(page.getByLabel("Image overlay")).toBeVisible();
+  await expect(page.getByLabel("Image zoom")).toBeVisible();
+  await expect(page.getByLabel("Text scale")).toBeVisible();
+  await expect(page.getByLabel("Card")).toBeVisible();
+  await expect(page.getByLabel("Radius")).toBeVisible();
+  await expect(page.getByLabel("Font style")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Mocha theme" })).toBeVisible();
+  await expect(page.getByTestId("export-block-notes")).toHaveAttribute("draggable", "true");
+
+  await page.getByRole("button", { name: "Move Notes up" }).click();
+  await expect(page.getByText("Unsaved changes")).toBeVisible();
+
+  await page.getByRole("button", { name: "Save preset" }).click();
+  await expect(page.getByText("Preset saved")).toBeVisible();
+  await page.getByRole("button", { name: "Apply preset" }).click();
+  await expect(page.getByText("Preset applied")).toBeVisible();
 });

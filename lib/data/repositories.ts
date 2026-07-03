@@ -948,6 +948,7 @@ export async function createRecipeInDb(input: {
   temperatureCelsius: number;
   grindLabel: string;
   grindSetting?: string;
+  gearItemIds?: string[];
   steps: Array<{
     label: string;
     startsAtSeconds: number;
@@ -961,6 +962,9 @@ export async function createRecipeInDb(input: {
     where: eq(profiles.userId, viewerId)
   });
   const [coffee] = await getCoffeesFromDb();
+  const ownedGearItemIds = input.gearItemIds
+    ? await filterOwnedGearItemIds(input.gearItemIds, viewerId)
+    : undefined;
   const recipeId = crypto.randomUUID();
   const slug = slugify(input.title);
 
@@ -1005,7 +1009,11 @@ export async function createRecipeInDb(input: {
     }))
   );
 
-  await syncRecipeGearForSetup(recipeId, viewerId, input.method);
+  if (ownedGearItemIds) {
+    await syncRecipeGearIds(recipeId, ownedGearItemIds);
+  } else {
+    await syncRecipeGearForSetup(recipeId, viewerId, input.method);
+  }
 
   return { id: recipeId, slug };
 }
@@ -2858,7 +2866,10 @@ async function getDefaultRecipeGearIds(ownerId: string, method: BrewMethod) {
 
 async function syncRecipeGearForSetup(recipeId: string, ownerId: string, method: BrewMethod) {
   const gearIds = await getDefaultRecipeGearIds(ownerId, method);
+  await syncRecipeGearIds(recipeId, gearIds);
+}
 
+async function syncRecipeGearIds(recipeId: string, gearIds: string[]) {
   await db.delete(recipeGearItems).where(eq(recipeGearItems.recipeId, recipeId));
   if (gearIds.length === 0) {
     return;
@@ -2871,6 +2882,22 @@ async function syncRecipeGearForSetup(recipeId: string, ownerId: string, method:
       position: index
     }))
   );
+}
+
+async function filterOwnedGearItemIds(gearItemIds: string[], ownerId: string) {
+  const uniqueIds = Array.from(new Set(gearItemIds.filter(Boolean)));
+
+  if (uniqueIds.length === 0) {
+    return [];
+  }
+
+  const rows = await db
+    .select({ id: gearItems.id })
+    .from(gearItems)
+    .where(and(inArray(gearItems.id, uniqueIds), eq(gearItems.ownerId, ownerId)));
+  const ownedIds = new Set(rows.map((row) => row.id));
+
+  return uniqueIds.filter((id) => ownedIds.has(id));
 }
 
 async function copyRecipeGearItems(sourceRecipeId: string, targetRecipeId: string) {

@@ -1,37 +1,86 @@
 "use client";
 
 import { Download, Image as ImageIcon, Palette, Save, Smartphone } from "lucide-react";
-import { useMemo, useTransition } from "react";
+import { useMemo, useState } from "react";
+import {
+  exportFonts,
+  formats,
+  themes,
+  type ExportBlockId,
+  type ExportFontId,
+  type ExportFormat,
+  type ExportFormatId,
+  type ExportTheme,
+  type ExportThemeId
+} from "@/components/export/export-options";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
-import { accents, formats, type ExportBlockId, type ExportFormat, type ExportFormatId } from "@/components/export/export-options";
+import { Input, Label } from "@/components/ui/form";
 import type { Recipe } from "@/lib/domain";
 import { formatDuration, formatRatio } from "@/lib/format";
 
 export function ExportControls({
   recipe,
   formatId,
-  accent,
+  themeId,
+  overlayStrength,
+  textScale,
+  imageZoom,
+  cardOpacity,
+  cardRadius,
+  fontId,
   enabledBlockIds,
+  blockOrder,
   onFormatChange,
-  onAccentChange,
+  onThemeChange,
+  onOverlayChange,
+  onTextScaleChange,
+  onImageZoomChange,
+  onCardOpacityChange,
+  onCardRadiusChange,
+  onFontChange,
   onSaveDraft,
-  onSavePreset
+  onSavePreset,
+  onLoadPreset,
+  onResetDraft
 }: {
   recipe: Recipe;
   formatId: ExportFormatId;
-  accent: string;
+  themeId: ExportThemeId;
+  overlayStrength: number;
+  textScale: number;
+  imageZoom: number;
+  cardOpacity: number;
+  cardRadius: number;
+  fontId: ExportFontId;
   enabledBlockIds: ExportBlockId[];
+  blockOrder: ExportBlockId[];
   onFormatChange: (formatId: ExportFormatId) => void;
-  onAccentChange: (accent: string) => void;
+  onThemeChange: (themeId: ExportThemeId) => void;
+  onOverlayChange: (value: number) => void;
+  onTextScaleChange: (value: number) => void;
+  onImageZoomChange: (value: number) => void;
+  onCardOpacityChange: (value: number) => void;
+  onCardRadiusChange: (value: number) => void;
+  onFontChange: (fontId: ExportFontId) => void;
   onSaveDraft: () => void;
   onSavePreset: () => void;
+  onLoadPreset: () => void;
+  onResetDraft: () => void;
 }) {
-  const [isPending, startTransition] = useTransition();
-  const selectedFormat = useMemo(() => formats.find((format) => format.id === formatId) ?? formats[0], [formatId]);
+  const [isRendering, setIsRendering] = useState(false);
+  const selectedFormat = useMemo(
+    () => formats.find((format) => format.id === formatId) ?? formats[0],
+    [formatId]
+  );
+  const selectedTheme = useMemo(
+    () => themes.find((theme) => theme.id === themeId) ?? themes[0],
+    [themeId]
+  );
 
-  function exportPng() {
-    startTransition(() => {
+  async function exportPng() {
+    setIsRendering(true);
+    try {
       const canvas = document.createElement("canvas");
       canvas.width = selectedFormat.width;
       canvas.height = selectedFormat.height;
@@ -39,12 +88,22 @@ export function ExportControls({
 
       if (!context) return;
 
-      drawRecipeCard(context, recipe, selectedFormat, accent, enabledBlockIds);
+      await drawRecipeCard(context, recipe, selectedFormat, selectedTheme, enabledBlockIds, {
+        overlayStrength,
+        textScale,
+        imageZoom,
+        cardOpacity,
+        cardRadius,
+        fontId,
+        blockOrder
+      });
       const link = document.createElement("a");
       link.download = `${recipe.slug}-${selectedFormat.id}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
-    });
+    } finally {
+      setIsRendering(false);
+    }
   }
 
   return (
@@ -55,7 +114,10 @@ export function ExportControls({
           {formats.map((format, index) => {
             const Icon = index === 0 ? Smartphone : index === 1 ? ImageIcon : Download;
             return (
-              <label key={format.id} className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[var(--border)] p-3">
+              <label
+                key={format.id}
+                className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[var(--border)] p-3"
+              >
                 <span className="flex items-center gap-3">
                   <Icon className="h-5 w-5 text-[var(--accent)]" aria-hidden />
                   <span>
@@ -75,21 +137,89 @@ export function ExportControls({
           })}
         </div>
       </Card>
+
       <Card>
         <CardTitle>Style</CardTitle>
         <div className="mt-4 flex gap-3">
-          {accents.map((color, index) => (
+          {themes.map((theme) => (
             <button
-              key={color}
+              key={theme.id}
               type="button"
               className="focus-ring h-10 w-10 rounded-full border border-[var(--border-strong)] data-[active=true]:ring-2 data-[active=true]:ring-[var(--accent)]"
-              style={{ background: color }}
-              aria-label={`Accent color ${index + 1}`}
-              data-active={color === accent}
-              onClick={() => onAccentChange(color)}
+              style={{ background: theme.accent }}
+              aria-label={`${theme.label} theme`}
+              data-active={theme.id === themeId}
+              title={theme.label}
+              onClick={() => onThemeChange(theme.id)}
             />
           ))}
         </div>
+
+        <div className="mt-5 grid gap-4">
+          <RangeControl
+            id="overlayStrength"
+            label="Image overlay"
+            value={overlayStrength}
+            min={35}
+            max={85}
+            suffix="%"
+            onChange={onOverlayChange}
+          />
+          <RangeControl
+            id="imageZoom"
+            label="Image zoom"
+            value={imageZoom}
+            min={100}
+            max={135}
+            suffix="%"
+            onChange={onImageZoomChange}
+          />
+          <RangeControl
+            id="textScale"
+            label="Text scale"
+            value={textScale}
+            min={85}
+            max={115}
+            suffix="%"
+            onChange={onTextScaleChange}
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <RangeControl
+              id="cardOpacity"
+              label="Card"
+              value={cardOpacity}
+              min={35}
+              max={92}
+              suffix="%"
+              onChange={onCardOpacityChange}
+            />
+            <RangeControl
+              id="cardRadius"
+              label="Radius"
+              value={cardRadius}
+              min={0}
+              max={28}
+              suffix="px"
+              onChange={onCardRadiusChange}
+            />
+          </div>
+          <div>
+            <Label htmlFor="fontId">Font style</Label>
+            <select
+              id="fontId"
+              value={fontId}
+              className="focus-ring h-11 w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-black/30 px-3 text-sm text-[var(--text)]"
+              onChange={(event) => onFontChange(event.currentTarget.value as ExportFontId)}
+            >
+              {exportFonts.map((font) => (
+                <option key={font.id} value={font.id}>
+                  {font.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         <Button
           type="button"
           variant="secondary"
@@ -99,117 +229,320 @@ export function ExportControls({
         >
           Save preset
         </Button>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <Button type="button" variant="ghost" onClick={onLoadPreset}>
+            Apply preset
+          </Button>
+          <Button type="button" variant="ghost" onClick={onResetDraft}>
+            Reset
+          </Button>
+        </div>
       </Card>
-      <Button type="button" size="lg" className="w-full" icon={<Download className="h-5 w-5" aria-hidden />} disabled={isPending} onClick={exportPng}>
-        {isPending ? "Rendering..." : "Export PNG"}
+
+      <Button
+        type="button"
+        size="lg"
+        className="w-full"
+        icon={<Download className="h-5 w-5" aria-hidden />}
+        disabled={isRendering}
+        onClick={exportPng}
+      >
+        {isRendering ? "Rendering..." : "Export PNG"}
       </Button>
-      <Button type="button" variant="secondary" className="w-full" icon={<Save className="h-4 w-4" aria-hidden />} onClick={onSaveDraft}>
+      <Button
+        type="button"
+        variant="secondary"
+        className="w-full"
+        icon={<Save className="h-4 w-4" aria-hidden />}
+        onClick={onSaveDraft}
+      >
         Save draft
       </Button>
     </>
   );
 }
 
-function drawRecipeCard(context: CanvasRenderingContext2D, recipe: Recipe, format: ExportFormat, accent: string, enabledBlockIds: ExportBlockId[]) {
+function RangeControl({
+  id,
+  label,
+  value,
+  min,
+  max,
+  suffix,
+  onChange
+}: {
+  id: string;
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  suffix: string;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <Label htmlFor={id} className="mb-0">
+          {label}
+        </Label>
+        <span className="text-xs text-[var(--text-dim)]">
+          {value}
+          {suffix}
+        </span>
+      </div>
+      <Input
+        id={id}
+        type="range"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(event) => onChange(Number(event.currentTarget.value))}
+      />
+    </div>
+  );
+}
+
+async function drawRecipeCard(
+  context: CanvasRenderingContext2D,
+  recipe: Recipe,
+  format: ExportFormat,
+  theme: ExportTheme,
+  enabledBlockIds: ExportBlockId[],
+  options: {
+    overlayStrength: number;
+    textScale: number;
+    imageZoom: number;
+    cardOpacity: number;
+    cardRadius: number;
+    fontId: ExportFontId;
+    blockOrder: ExportBlockId[];
+  }
+) {
   const { width, height } = format;
+  const scale = options.textScale / 100;
+  const font = exportFonts.find((item) => item.id === options.fontId) ?? exportFonts[0];
+  const activeBlocks = options.blockOrder.filter((blockId) => enabledBlockIds.includes(blockId));
   context.clearRect(0, 0, width, height);
 
   if (!format.transparent) {
-    const gradient = context.createLinearGradient(0, 0, width, height);
-    gradient.addColorStop(0, "#151710");
-    gradient.addColorStop(0.55, "#242018");
-    gradient.addColorStop(1, "#0e1718");
-    context.fillStyle = gradient;
+    context.fillStyle = theme.background;
     context.fillRect(0, 0, width, height);
+    const image = await loadImage(recipe.coverUrl);
+    if (image) {
+      drawCoverImage(context, image, 0, 0, width, height, options.imageZoom);
+    }
+    drawOverlay(context, width, height, options.overlayStrength);
   }
 
   const margin = Math.round(width * 0.08);
   const cardWidth = width - margin * 2;
   const cardHeight = height - margin * 2;
-  roundedRect(context, margin, margin, cardWidth, cardHeight, 44);
-  context.fillStyle = format.transparent ? "rgba(17, 20, 15, 0.94)" : "rgba(255,255,255,0.055)";
+  const radius = Math.round((options.cardRadius / 20) * 44);
+  roundedRect(context, margin, margin, cardWidth, cardHeight, radius);
+  context.fillStyle = format.transparent
+    ? hexToRgba(theme.background, options.cardOpacity / 100)
+    : surfaceWithOpacity(theme.surface, options.cardOpacity / 100);
   context.fill();
-  context.strokeStyle = accent;
+  context.strokeStyle = theme.accent;
   context.lineWidth = 5;
   context.stroke();
 
-  let cursorY = margin + 88;
+  let cursorY = margin + 78;
+  const contentX = margin + 54;
+  const contentWidth = cardWidth - 108;
 
-  if (enabledBlockIds.includes("hero")) {
-    context.fillStyle = accent;
-    context.font = "700 34px Arial";
-    context.fillText("COFFEE JOURNEY", margin + 54, cursorY);
+  for (const blockId of activeBlocks) {
+    if (cursorY > height - margin - 90) break;
 
-    context.fillStyle = "#f8f4eb";
-    wrapText(context, recipe.title, margin + 54, cursorY + 102, cardWidth - 108, Math.round(width * 0.08), Math.round(width * 0.095), "Georgia");
+    if (blockId === "hero") {
+      context.fillStyle = theme.accent;
+      context.font = `700 ${Math.round(34 * scale)}px ${font.body}`;
+      context.fillText(`${recipe.method.toUpperCase()} RECIPE`, contentX, cursorY);
 
-    context.fillStyle = "rgba(248,244,235,0.72)";
-    context.font = "400 34px Arial";
-    wrapText(context, recipe.subtitle || recipe.description || "Brew recipe", margin + 54, cursorY + 322, cardWidth - 108, 34, 48, "Arial", 2);
-    cursorY += Math.round(cardHeight * 0.45);
-  } else {
-    cursorY += 24;
-  }
+      context.fillStyle = theme.text;
+      const titleSize = Math.round(width * 0.075 * scale);
+      wrapText(
+        context,
+        recipe.title,
+        contentX,
+        cursorY + 92,
+        contentWidth,
+        titleSize,
+        Math.round(titleSize * 1.12),
+        font.heading,
+        3
+      );
 
-  const metrics = [
-    ["Method", recipe.method],
-    ["Coffee", `${recipe.doseGrams}g`],
-    ["Water", `${recipe.waterGrams}g`],
-    ["Ratio", formatRatio(recipe.doseGrams, recipe.waterGrams)],
-    ["Temp", `${recipe.temperatureCelsius}C`],
-    ["Time", formatDuration(recipe.totalTimeSeconds)]
-  ];
+      context.fillStyle = theme.muted;
+      context.font = `400 ${Math.round(30 * scale)}px ${font.body}`;
+      wrapText(
+        context,
+        recipe.flavorNotes.slice(0, 3).join(" / ") || recipe.subtitle || "Brew recipe",
+        contentX,
+        cursorY + 292,
+        contentWidth,
+        Math.round(30 * scale),
+        Math.round(44 * scale),
+        font.body,
+        2
+      );
+      cursorY += Math.round(345 * scale);
+    }
 
-  if (enabledBlockIds.includes("specs")) {
-    const metricTop = Math.min(height - margin - 360, cursorY);
-    const cellWidth = (cardWidth - 108 - 32) / 2;
-    metrics.forEach(([label, value], index) => {
-      const x = margin + 54 + (index % 2) * (cellWidth + 32);
-      const y = metricTop + Math.floor(index / 2) * 112;
-      context.fillStyle = "rgba(255,255,255,0.075)";
-      roundedRect(context, x, y, cellWidth, 82, 18);
-      context.fill();
-      context.fillStyle = "rgba(248,244,235,0.58)";
-      context.font = "700 22px Arial";
-      context.fillText(label.toUpperCase(), x + 24, y + 30);
-      context.fillStyle = "#f8f4eb";
-      context.font = "700 30px Arial";
-      context.fillText(value, x + 24, y + 62);
-    });
-    cursorY = metricTop + 350;
-  }
+    if (blockId === "specs") {
+      const metrics = [
+        ["Method", recipe.method],
+        ["Coffee", `${recipe.doseGrams}g`],
+        ["Water", `${recipe.waterGrams}g`],
+        ["Ratio", formatRatio(recipe.doseGrams, recipe.waterGrams)],
+        ["Temp", `${recipe.temperatureCelsius}C`],
+        ["Time", formatDuration(recipe.totalTimeSeconds)]
+      ];
+      const cellWidth = (contentWidth - 32) / 2;
+      metrics.forEach(([label, value], index) => {
+        const x = contentX + (index % 2) * (cellWidth + 32);
+        const y = cursorY + Math.floor(index / 2) * 104;
+        context.fillStyle = "rgba(255,255,255,0.075)";
+        roundedRect(context, x, y, cellWidth, 76, Math.max(10, radius / 2));
+        context.fill();
+        context.fillStyle = theme.muted;
+        context.font = `700 ${Math.round(20 * scale)}px ${font.body}`;
+        context.fillText(label.toUpperCase(), x + 22, y + 28);
+        context.fillStyle = theme.text;
+        context.font = `700 ${Math.round(28 * scale)}px ${font.body}`;
+        context.fillText(value, x + 22, y + 58);
+      });
+      cursorY += 332;
+    }
 
-  if (enabledBlockIds.includes("steps")) {
-    const stepsTop = Math.min(cursorY, height - margin - 250);
-    context.fillStyle = accent;
-    context.font = "700 26px Arial";
-    context.fillText("POURING STEPS", margin + 54, stepsTop);
+    if (blockId === "steps") {
+      context.fillStyle = theme.accent;
+      context.font = `700 ${Math.round(26 * scale)}px ${font.body}`;
+      context.fillText("POURING STEPS", contentX, cursorY);
 
-    context.fillStyle = "rgba(248,244,235,0.72)";
-    context.font = "400 26px Arial";
-    recipe.steps.slice(0, 3).forEach((step, index) => {
-      context.fillText(`${formatDuration(step.startsAtSeconds)}  ${step.label}`, margin + 54, stepsTop + 48 + index * 42);
-    });
-    cursorY = stepsTop + 188;
-  }
+      context.fillStyle = theme.muted;
+      context.font = `400 ${Math.round(26 * scale)}px ${font.body}`;
+      recipe.steps.slice(0, 3).forEach((step, index) => {
+        context.fillText(
+          `${formatDuration(step.startsAtSeconds)}  ${step.label}`,
+          contentX,
+          cursorY + 48 + index * 42
+        );
+      });
+      cursorY += 188;
+    }
 
-  if (enabledBlockIds.includes("notes")) {
-    context.fillStyle = "rgba(248,244,235,0.68)";
-    wrapText(context, recipe.description, margin + 54, Math.min(cursorY, height - margin - 160), cardWidth - 108, 26, 38, "Arial", 3);
-  }
+    if (blockId === "notes") {
+      context.fillStyle = theme.muted;
+      wrapText(
+        context,
+        recipe.description,
+        contentX,
+        cursorY,
+        contentWidth,
+        Math.round(26 * scale),
+        Math.round(38 * scale),
+        font.body,
+        3
+      );
+      cursorY += 142;
+    }
 
-  const footerY = height - margin - 88;
-  if (enabledBlockIds.includes("footer")) {
-    context.fillStyle = accent;
-    context.font = "700 28px Arial";
-    context.fillText(`@${recipe.author.handle}`, margin + 54, footerY);
-    context.fillStyle = "rgba(248,244,235,0.58)";
-    context.font = "400 24px Arial";
-    context.fillText(`${recipe.steps.length} steps - ${recipe.visibility}`, margin + 54, footerY + 42);
+    if (blockId === "footer") {
+      context.fillStyle = theme.accent;
+      context.font = `700 ${Math.round(28 * scale)}px ${font.body}`;
+      context.fillText(`@${recipe.author.handle}`, contentX, cursorY);
+      context.fillStyle = theme.muted;
+      context.font = `400 ${Math.round(24 * scale)}px ${font.body}`;
+      context.fillText(
+        `${recipe.steps.length} steps - ${recipe.visibility}`,
+        contentX,
+        cursorY + 42
+      );
+      cursorY += 96;
+    }
   }
 }
 
-function roundedRect(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
+async function loadImage(src: string) {
+  if (!src) {
+    return null;
+  }
+
+  return new Promise<HTMLImageElement | null>((resolve) => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => resolve(image);
+    image.onerror = () => resolve(null);
+    image.src = src;
+  });
+}
+
+function drawCoverImage(
+  context: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  zoom: number
+) {
+  const imageRatio = image.naturalWidth / image.naturalHeight;
+  const targetRatio = width / height;
+  const zoomFactor = zoom / 100;
+  const baseSourceWidth =
+    imageRatio > targetRatio ? image.naturalHeight * targetRatio : image.naturalWidth;
+  const baseSourceHeight =
+    imageRatio > targetRatio ? image.naturalHeight : image.naturalWidth / targetRatio;
+  const sourceWidth = baseSourceWidth / zoomFactor;
+  const sourceHeight = baseSourceHeight / zoomFactor;
+  const sourceX = (image.naturalWidth - sourceWidth) / 2;
+  const sourceY = (image.naturalHeight - sourceHeight) / 2;
+
+  context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, x, y, width, height);
+}
+
+function drawOverlay(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  overlayStrength: number
+) {
+  const alpha = Math.min(Math.max(overlayStrength / 100, 0.35), 0.85);
+  const gradient = context.createLinearGradient(0, 0, width, height);
+  gradient.addColorStop(0, `rgba(0, 0, 0, ${alpha})`);
+  gradient.addColorStop(0.55, `rgba(0, 0, 0, ${Math.max(alpha - 0.18, 0.25)})`);
+  gradient.addColorStop(1, `rgba(0, 0, 0, ${Math.max(alpha - 0.35, 0.12)})`);
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, width, height);
+}
+
+function surfaceWithOpacity(surface: string, opacity: number) {
+  const match = surface.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*[\d.]+\)/);
+  if (!match) {
+    return surface;
+  }
+
+  return `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${opacity})`;
+}
+
+function hexToRgba(hex: string, opacity: number) {
+  const normalized = hex.replace("#", "");
+  const value = Number.parseInt(normalized, 16);
+  const red = (value >> 16) & 255;
+  const green = (value >> 8) & 255;
+  const blue = value & 255;
+  return `rgba(${red}, ${green}, ${blue}, ${opacity})`;
+}
+
+function roundedRect(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number
+) {
   context.beginPath();
   context.moveTo(x + radius, y);
   context.arcTo(x + width, y, x + width, y + height, radius);

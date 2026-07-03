@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
+    "dev:bypass-auth": "E2E_AUTH_BYPASS=true next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
