@@ -203,7 +203,7 @@ export async function getRecipesFromDb(filters?: {
       mapRecipe(
         row.recipe,
         row.profile,
-        row.coffee ?? seedCoffees[0],
+        row.coffee,
         steps.get(row.recipe.id) ?? [],
         gearByRecipeId.get(row.recipe.id) ?? []
       )
@@ -257,7 +257,7 @@ export async function getPublicRecipeFromDb(handle: string, slug: string): Promi
       return mapRecipe(
         row.recipe,
         row.profile,
-        row.coffee ?? seedCoffees[0],
+        row.coffee,
         steps.get(row.recipe.id) ?? [],
         gearByRecipeId.get(row.recipe.id) ?? []
       );
@@ -961,7 +961,6 @@ export async function createRecipeInDb(input: {
   const viewerProfile = await db.query.profiles.findFirst({
     where: eq(profiles.userId, viewerId)
   });
-  const [coffee] = await getCoffeesFromDb();
   const ownedGearItemIds = input.gearItemIds
     ? await filterOwnedGearItemIds(input.gearItemIds, viewerId)
     : undefined;
@@ -971,7 +970,7 @@ export async function createRecipeInDb(input: {
   await db.insert(recipesTable).values({
     id: recipeId,
     ownerId: viewerId,
-    coffeeId: coffee?.id ?? null,
+    coffeeId: null,
     slug,
     title: input.title,
     subtitle: input.subtitle ?? "",
@@ -1219,20 +1218,18 @@ export async function createBrewLogInDb(input: {
   const viewerId = await ensureCurrentIdentity();
   const actor = await getNotificationActor(viewerId);
   const recipe = input.recipeId ? await getRecipeByIdFromDb(input.recipeId) : null;
-  const coffee = input.coffeeId
-    ? await getCoffeeByIdFromDb(input.coffeeId)
-    : (recipe?.coffee ?? null);
+  const coffee = input.coffeeId ? await getCoffeeByIdFromDb(input.coffeeId) : null;
   const id = crypto.randomUUID();
 
-  if (!recipe && !coffee) {
-    throw new Error("Choose a recipe or coffee before saving a brew log");
+  if (!coffee) {
+    throw new Error("Choose coffee before saving a brew log");
   }
 
   await db.insert(brewLogsTable).values({
     id,
     ownerId: viewerId,
     recipeId: input.recipeId,
-    coffeeId: input.coffeeId ?? recipe?.coffee.id,
+    coffeeId: coffee.id,
     title: recipe ? `Brewed ${recipe.title}` : `${input.method} with ${coffee?.name ?? "coffee"}`,
     method: input.method,
     doseGrams: input.doseGrams,
@@ -1284,19 +1281,17 @@ export async function updateBrewLogInDb(input: {
     where: and(eq(brewLogsTable.id, input.id), eq(brewLogsTable.ownerId, viewerId))
   });
   const recipe = input.recipeId ? await getRecipeByIdFromDb(input.recipeId) : null;
-  const coffee = input.coffeeId
-    ? await getCoffeeByIdFromDb(input.coffeeId)
-    : (recipe?.coffee ?? null);
+  const coffee = input.coffeeId ? await getCoffeeByIdFromDb(input.coffeeId) : null;
 
-  if (!recipe && !coffee) {
-    throw new Error("Choose a recipe or coffee before saving a brew log");
+  if (!coffee) {
+    throw new Error("Choose coffee before saving a brew log");
   }
 
   const [updated] = await db
     .update(brewLogsTable)
     .set({
       recipeId: input.recipeId,
-      coffeeId: input.coffeeId ?? recipe?.coffee.id,
+      coffeeId: coffee.id,
       title: recipe ? `Brewed ${recipe.title}` : `${input.method} with ${coffee?.name ?? "coffee"}`,
       method: input.method,
       doseGrams: input.doseGrams,
@@ -2571,7 +2566,7 @@ async function seedE2eDemoData() {
       seedRecipes.map((recipe) => ({
         id: recipe.id,
         ownerId: DEV_USER_ID,
-        coffeeId: recipe.coffee.id,
+        coffeeId: recipe.coffee?.id ?? null,
         slug: recipe.slug,
         title: recipe.title,
         subtitle: recipe.subtitle,
@@ -3294,14 +3289,15 @@ function buildGearNotes(input: {
 function mapRecipe(
   row: DbRecipe,
   profile: DbProfile,
-  coffee: DbCoffee | CoffeeBean,
+  coffee: DbCoffee | CoffeeBean | null,
   steps: RecipeStep[],
   gear: GearItem[]
 ): Recipe {
-  const mappedCoffee =
-    "slug" in coffee && "imageUrl" in coffee
+  const mappedCoffee = coffee
+    ? "slug" in coffee && "imageUrl" in coffee
       ? (coffee as CoffeeBean)
-      : mapCoffee(coffee as DbCoffee);
+      : mapCoffee(coffee as DbCoffee)
+    : undefined;
 
   return {
     id: row.id,

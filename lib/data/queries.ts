@@ -269,7 +269,7 @@ export async function getPublicCoffeeContent(slug: string): Promise<{
   return {
     coffee,
     recipes: recipes.filter(
-      (recipe) => recipe.coffee.id === coffee.id && recipe.visibility === "public"
+      (recipe) => recipe.coffee?.id === coffee.id && recipe.visibility === "public"
     ),
     brewLogs: brewLogs.filter(
       (brewLog) => brewLog.coffee.id === coffee.id && brewLog.visibility === "public"

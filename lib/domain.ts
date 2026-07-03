@@ -138,7 +138,7 @@ export type Recipe = {
   commentPolicy: CommentPolicy;
   coverUrl: string;
   author: UserProfile;
-  coffee: CoffeeBean;
+  coffee?: CoffeeBean;
   doseGrams: number;
   waterGrams: number;
   ratio: number;

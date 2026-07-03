@@ -215,7 +215,7 @@ async function main() {
       seedRecipes.map((recipe) => ({
         id: recipe.id,
         ownerId: "dev-user",
-        coffeeId: recipe.coffee.id,
+        coffeeId: recipe.coffee?.id ?? null,
         slug: recipe.slug,
         title: recipe.title,
         subtitle: recipe.subtitle,
