@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Bookmark, MessageCircle, Repeat2, Star } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
+import { BackButton } from "@/components/ui/back-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -54,6 +55,9 @@ export default async function PublicRecipePage({ params }: { params: Promise<Par
 
   return (
     <main className="mx-auto grid max-w-7xl gap-5 px-4 py-5 md:px-6 lg:grid-cols-[1fr_380px]">
+      <div className="lg:col-span-2">
+        <BackButton fallbackHref={`/u/${recipe.author.handle}`} />
+      </div>
       <section className="grid gap-5">
         <Card className="overflow-hidden p-0">
           <div className="grid md:grid-cols-[0.85fr_1.15fr]">

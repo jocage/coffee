@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Edit, Share2, Trash2 } from "lucide-react";
+import { BackButton } from "@/components/ui/back-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { StepTable } from "@/components/coffee/step-table";
@@ -21,6 +22,9 @@ export default async function OwnerRecipePage({ params }: { params: Promise<{ id
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-5 md:px-6">
+      <div className="mb-4">
+        <BackButton fallbackHref="/recipes" />
+      </div>
       <div className="mb-5 flex items-center justify-between gap-3">
         <div>
           <h1 className="serif text-4xl">{recipe.title}</h1>
